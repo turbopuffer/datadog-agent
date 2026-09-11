@@ -1,0 +1,13 @@
+# CVEs accepted for the telemetry agent image. Copy of
+# turbopuffer/turbopuffer ci/mirror-trivyignore for the same vendor base.
+# One CVE id per line. Each entry needs a comment with the owner and reason.
+
+# conor: openssl hex-encode heap overflow requires 32-bit size_t wraparound
+# from a >1GB certificate extension; fleet is 64-bit only (amd64/arm64), so
+# the condition is unreachable. Upstream severity: low.
+CVE-2026-31789
+
+# conor: only affected symbol is ssh.NewServerConn. Verified 2026-09-08 against
+# the 7.83.0 digests. 5 of 6 flagged binaries do not link x/crypto/ssh. The agent
+# binary links only the SSH client. No Datadog binary runs an SSH server.
+CVE-2026-56854 exp:2026-12-31
