@@ -1,0 +1,22 @@
+pkg/config/setup/config.go
+  s_bebc2a5a113a9c::t_a7cbde19a029f5 630-640
+pkg/config/setup/host_replace_rules_test.go
+  s_bebc2a5a113a9c::t_8efaa0480d03a4 9-10,15-18,21-39
+  s_bebc2a5a113a9c::t_85e646ab15d3f5 40
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "211a3448ecfa7c9cafd777e06865b9311bfbf4b7",
+  "prompts": {},
+  "sessions": {
+    "s_bebc2a5a113a9c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ed432c95-8e63-483d-b86b-e77908f00e75",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "Conor Landry <conor@turbopuffer.com>"
+    }
+  }
+}
