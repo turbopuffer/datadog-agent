@@ -39,6 +39,24 @@ payload_version() {
   awk '$1=="github.com/DataDog/agent-payload/v5"{print $2; exit}' "$1/go.mod" | cut -d+ -f1
 }
 
+# Embeds the config schema the binary validates against, the steps
+# //pkg/config/schema:install_compressed runs under Bazel. The files are
+# gitignored and //go:embed picks them up from the tree at build time.
+embed_schema() {
+  local src=$1 tmp
+  tmp=$(mktemp -d)
+  (
+    cd "${src}"
+    python3 tasks/schema/merge_schema.py pkg/config/schema/yaml/core_schema.yaml "${tmp}/core_schema.merged.yaml"
+    PYTHONPATH="${src}" python3 tasks/schema/produce_byproduct.py embedded "${tmp}/core_schema.merged.yaml" "${tmp}/core_schema.embedded.yaml"
+    PYTHONPATH="${src}" python3 tasks/schema/produce_byproduct.py embedded pkg/config/schema/yaml/system-probe_schema.yaml "${tmp}/system-probe_schema.embedded.yaml"
+    # --no-check -5 is ZSTD_ARGS in pkg/config/schema/BUILD.bazel.
+    zstd --no-check -5 -q -f "${tmp}/core_schema.embedded.yaml" -o pkg/config/schema/compressed/core_schema.yaml.zstd
+    zstd --no-check -5 -q -f "${tmp}/system-probe_schema.embedded.yaml" -o pkg/config/schema/compressed/system-probe_schema.yaml.zstd
+  )
+  rm -rf "${tmp}"
+}
+
 # Mirrors get_build_flags and get_version_ldflags in tasks/libs/common/utils.py
 # for a Linux build with --install-path=/opt/datadog-agent and
 # --embedded-path=/opt/datadog-agent/embedded.
@@ -60,6 +78,7 @@ build_agent() {
   ldflags+=" -extldflags '-Wl,--version-script=${src}/datadog-agent.map -Wl,--disable-new-dtags'"
 
   log "building ${version} from ${src}"
+  embed_schema "${src}"
   (
     cd "${src}"
     CGO_CFLAGS="-I${EMBEDDED}/include" \

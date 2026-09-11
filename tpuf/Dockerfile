@@ -21,7 +21,7 @@ FROM ${VENDOR_IMAGE}@${VENDOR_DIGEST} AS build
 
 ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \
- && apt-get install -y --no-install-recommends gcc libc6-dev libsystemd-dev binutils ca-certificates curl \
+ && apt-get install -y --no-install-recommends gcc libc6-dev libsystemd-dev binutils ca-certificates curl python3 python3-yaml zstd \
  && rm -rf /var/lib/apt/lists/*
 
 # Go release named by the tag's .go-version. Checksums come from
