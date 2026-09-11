@@ -1,0 +1,14 @@
+tpuf/compile.sh
+  h_20ded153fdbc37 43-46,48,50-53,56-58
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "6b3a050593505fe86fc6c3665e24833990ee9aa7",
+  "prompts": {},
+  "humans": {
+    "h_20ded153fdbc37": {
+      "author": "Conor Landry <conor@turbopuffer.com>"
+    }
+  }
+}
