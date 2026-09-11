@@ -627,6 +627,17 @@ func LoadDatadog(config pkgconfigmodel.Config, secretResolver secrets.Component,
 		if errors.Is(err, os.ErrPermission) {
 			return log.Warnf("Error loading config: %v (check config file permissions for dd-agent user)", err)
 		}
+		// Container deployments configure the Agent from the environment and
+		// carry no config file. Their replace rules must still stop the Agent
+		// when malformed, and their scrubber replacers must still register.
+		if errors.Is(err, pkgconfigmodel.ErrConfigFileNotFound) {
+			if verr := validateHostReplaceRules(config); verr != nil {
+				return verr
+			}
+			if verr := addScrubberAdditionalReplacers(config); verr != nil {
+				return verr
+			}
+		}
 		return err
 	}
 

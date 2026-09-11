@@ -6,11 +6,37 @@
 package setup
 
 import (
+	"errors"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	delegatedauthmock "github.com/DataDog/datadog-agent/comp/core/delegatedauth/mock"
+	secretsmock "github.com/DataDog/datadog-agent/comp/core/secrets/mock"
+	pkgconfigmodel "github.com/DataDog/datadog-agent/pkg/config/model"
 )
+
+// Container deployments configure the Agent from the environment and carry no
+// config file. LoadDatadog must still reject a malformed rule on that path.
+func TestLoadDatadogValidatesHostReplaceRulesWithoutConfigFile(t *testing.T) {
+	missing := filepath.Join(t.TempDir(), "datadog.yaml")
+
+	t.Setenv("DD_HOST_TAGS_REPLACE_RULES", `[{"name":"kube_node","pattern":"^.*$","repl":""}]`)
+	conf := newTestConf(t)
+	conf.SetConfigFile(missing)
+	err := LoadDatadog(conf, secretsmock.New(t), delegatedauthmock.New(t), nil)
+	require.ErrorIs(t, err, pkgconfigmodel.ErrConfigFileNotFound)
+
+	t.Setenv("DD_HOST_TAGS_REPLACE_RULES", `[{"name":"kube_node","pattern":"("}]`)
+	conf = newTestConf(t)
+	conf.SetConfigFile(missing)
+	err = LoadDatadog(conf, secretsmock.New(t), delegatedauthmock.New(t), nil)
+	require.Error(t, err)
+	assert.False(t, errors.Is(err, pkgconfigmodel.ErrConfigFileNotFound))
+	assert.Contains(t, err.Error(), "host_tags_replace_rules")
+}
 
 func TestValidateHostReplaceRulesDefaults(t *testing.T) {
 	conf := confFromYAML(t, "")
