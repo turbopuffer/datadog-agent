@@ -1,0 +1,93 @@
+# CI for the fork branches. Upstream runs the agent's test suite in GitLab CI,
+# and its GitHub workflows are PR bots, release automation and docs, so the
+# fork carries its own checks: unit tests for the edited packages, shellcheck
+# for the build scripts, and the overlay build with its differential gate on
+# amd64 against the public vendor image. Nothing here pushes or signs.
+
+name: tpuf-ci
+
+on:
+  push:
+    branches:
+      - "tpuf-*"
+  pull_request:
+    branches:
+      - "tpuf-*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tpuf-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  go:
+    name: go test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: .go-version
+          cache-dependency-path: "**/go.sum"
+
+      # The `test` tag is what `dda inv test` adds. The config mock panics without it.
+      - name: Vet and test the edited packages
+        env:
+          GOFLAGS: -mod=readonly
+          GOTOOLCHAIN: local
+        run: |
+          pkgs=(
+            ./pkg/config/setup/
+            ./comp/metadata/host/impl/hosttags/
+            ./comp/metadata/host/impl/utils/
+            ./pkg/collector/check/stats/
+            ./pkg/aggregator/
+          )
+          go vet -tags test "${pkgs[@]}"
+          go test -tags test -count=1 "${pkgs[@]}"
+
+  shell:
+    name: shellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: shellcheck -S warning tpuf/build.sh tpuf/compile.sh
+
+  overlay:
+    name: overlay build and gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      # Two agent builds plus the Go module cache do not fit beside the
+      # runner's preinstalled toolchains.
+      - name: Free disk space
+        run: sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android /usr/local/.ghcup
+
+      - name: Derive the base version from the branch
+        run: |
+          ref="${GITHUB_BASE_REF:-${GITHUB_REF_NAME}}"
+          base="${ref#tpuf-}"; base="${base%-base}"
+          [[ "${base}" =~ ^7\.[0-9]+\.[0-9]+$ ]] || { echo "cannot derive a base version from ${ref}"; exit 1; }
+          echo "TAG=${base}-tpuf.0" >> "$GITHUB_ENV"
+
+      - name: Build the overlay and run the gate
+        env:
+          PLATFORM: linux/amd64
+        run: tpuf/build.sh --tag "${TAG}"
+
+      - name: Check the built image
+        run: |
+          img="turbopuffer/datadog-agent-tpuf:${TAG}"
+          keys=$(docker run --rm --entrypoint agent "${img}" config print-agent-schema | grep -c 'host_tags_replace_rules\|host_aliases_replace_rules\|additional_replacers')
+          [ "${keys}" = 3 ] || { echo "embedded schema lists ${keys} of the 3 new keys"; exit 1; }
+          if docker run --rm -e DD_API_KEY=00000000000000000000000000000000 -e DD_HOSTNAME=ci \
+               -e DD_HOST_TAGS_REPLACE_RULES='[{"name":"kube_node","pattern":"("}]' "${img}" agent run; then
+            echo "the agent started with a malformed rule"; exit 1
+          fi

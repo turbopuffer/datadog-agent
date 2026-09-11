@@ -54,6 +54,19 @@ fails the build if the patched binary differs from the vendor binary in module
 list or build tags, from the base build in dynamic section, or if symbols
 outside the edited packages differ from a no-op build of the base sources.
 
+## CI
+
+Upstream runs the agent's test suite in GitLab CI. Its GitHub workflows are
+PR bots, release automation and docs, and none of them can run outside
+Datadog, so the fork branches carry none of them. Two upstream
+`pull_request_target` bots, the CLA assistant and the community labeler, run
+from the PR base branch regardless and are disabled at the repository level.
+`.github/workflows/tpuf-ci.yml` runs on `tpuf-*` branches and their pull
+requests: `go vet` and `go test -tags test` on the edited packages,
+shellcheck on the build scripts, and the overlay build with its gate on amd64
+against the public vendor image, followed by a check that the embedded schema
+lists the new keys and that a malformed rule stops the agent.
+
 ## Publishing
 
 `.github/workflows/publish-telemetry-images.yml` runs on a `7.*-tpuf.*` tag
