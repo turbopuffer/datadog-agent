@@ -25,7 +25,9 @@ fail() { printf 'FAIL: %s\n' "$*" >&2; exit 1; }
 
 buildinfo() { go version -m "$1"; }
 
-vendor_go=$(buildinfo "${VENDOR}" | head -1 | awk '{print $2}')
+# Readers that exit early would SIGPIPE the writer under pipefail, so every
+# pipeline here consumes its whole input.
+vendor_go=$(buildinfo "${VENDOR}" | awk 'NR==1{v=$2} END{print v}')
 local_go=$(go version | awk '{print $3}')
 [ "${vendor_go}" = "${local_go}" ] || fail "Go ${local_go} does not match the vendor binary's ${vendor_go}"
 
@@ -98,7 +100,10 @@ log "symbol diff: $(wc -l < "${OUT}/symbol-diff.txt") symbols, all in allowed pa
 log "gate: version stamp"
 version_line=$("${OUT}/agent-patched" version)
 printf '%s\n' "${version_line}"
-printf '%s\n' "${version_line}" | grep -Eq "^Agent ${TPUF_VERSION//./\\.} " || fail "agent version does not report ${TPUF_VERSION}"
+case "${version_line}" in
+  "Agent ${TPUF_VERSION} "*) ;;
+  *) fail "agent version does not report ${TPUF_VERSION}" ;;
+esac
 [ "${TPUF_VERSION%%-tpuf.*}" = "${BASE_VERSION}" ] || fail "${TPUF_VERSION} is not a pre-release of ${BASE_VERSION}"
 
 # Ship a stripped binary like the vendor. strip keeps .go.buildinfo, so
