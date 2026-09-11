@@ -88,8 +88,9 @@ log "dynamic section, vendor vs patched, informational"
 diff <(dynamic "${VENDOR}") <(dynamic "${OUT}/agent-patched") || true
 
 # Gate 3: the only symbols that differ between the base and patched builds
-# live in the packages the fork edits.
-symbols() { go tool nm -sort name "$1" | awk '{print $NF}' | sort -u; }
+# live in the packages the fork edits. e843419@ names are Cortex-A53 erratum
+# stubs the arm64 linker places by address, not code, so they are ignored.
+symbols() { go tool nm -sort name "$1" | awk '{print $NF}' | grep -Ev '^e843419@' | sort -u; }
 log "gate: symbol diff between base and patched builds"
 symdiff=$(diff <(symbols "${OUT}/agent-base") <(symbols "${OUT}/agent-patched") | grep -E '^[<>]' || true)
 printf '%s\n' "${symdiff}" | sed '/^$/d' > "${OUT}/symbol-diff.txt"
