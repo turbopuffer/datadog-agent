@@ -1,0 +1,20 @@
+tpuf/compile.sh
+  s_bebc2a5a113a9c::t_dcbde8586730e6 103-106
+  s_bebc2a5a113a9c::t_b1c462db50c730 28-30
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "d9281542a0afb9b1aa0ad81f5e56a632a9959b50",
+  "prompts": {},
+  "sessions": {
+    "s_bebc2a5a113a9c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ed432c95-8e63-483d-b86b-e77908f00e75",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "Conor Landry <conor@turbopuffer.com>"
+    }
+  }
+}
