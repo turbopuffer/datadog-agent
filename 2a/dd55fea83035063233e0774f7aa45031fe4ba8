@@ -1,0 +1,25 @@
+.github/workflows/publish-telemetry-images.yml
+  s_bebc2a5a113a9c::t_4b7b16beeba1fd 1,18,48
+.github/workflows/tpuf-ci.yml
+  s_bebc2a5a113a9c::t_52e79797169923 77
+tpuf/README.md
+  s_bebc2a5a113a9c::t_eb4116721d5c49 72
+tpuf/build.sh
+  s_bebc2a5a113a9c::t_1676206673d8ed 50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "2add55fea83035063233e0774f7aa45031fe4ba8",
+  "prompts": {},
+  "sessions": {
+    "s_bebc2a5a113a9c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ed432c95-8e63-483d-b86b-e77908f00e75",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "Conor Landry <conor@turbopuffer.com>"
+    }
+  }
+}
