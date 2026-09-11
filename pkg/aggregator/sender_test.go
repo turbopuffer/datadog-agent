@@ -284,6 +284,18 @@ func TestGetSenderServiceTagServiceCheck(t *testing.T) {
 	assert.Equal(t, append(checkTags, "service:service2"), sc.Tags)
 }
 
+func TestServiceCheckMessageIsScrubbed(t *testing.T) {
+	// this test not using anything global
+	// -
+
+	s := initSender(checkID1, "")
+	s.sender.FinalizeCheckServiceTag()
+	s.sender.ServiceCheck("test", servicecheck.ServiceCheckCritical, "testhostname", nil, "request failed: api_key=abcdef1234567890abcdef1234567890")
+	sc := <-s.serviceCheckChan
+	assert.NotContains(t, sc.Message, "abcdef1234567890abcdef1234567890")
+	assert.Contains(t, sc.Message, "request failed: api_key=")
+}
+
 func TestGetSenderServiceTagEvent(t *testing.T) {
 	// this test not using anything global
 	// -

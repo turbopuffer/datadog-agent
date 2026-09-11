@@ -992,6 +992,31 @@ properties:
 
             - "sensitive_key_1"
             - "sensitive_key_2"
+      additional_replacers:
+        node_type: setting
+        type: array
+        default: []
+        env_vars:
+        - DD_SCRUBBER_ADDITIONAL_REPLACERS
+        env_parser: json
+        items:
+          additionalProperties:
+            type: string
+          type: object
+        visibility: public
+        description: |-
+          Regular expressions the Agent scrubs from every line it scrubs: flares, status output,
+          check error and warning strings, and service check messages. Each rule has:
+           * name - string - A label for the rule.
+           * pattern - string - The regular expression to match.
+           * repl - string - The text that replaces each match.
+
+          Same shape as apm_config.replace_tags.
+        example: |2-
+
+            - name: "internal_ip"
+              pattern: '\b10\.\d{1,3}\.\d{1,3}\.\d{1,3}\b'
+              repl: "[IP]"
   no_proxy_nonexact_match:
     node_type: setting
     type: boolean

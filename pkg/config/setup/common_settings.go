@@ -1331,6 +1331,8 @@ func agent(config pkgconfigmodel.Setup) {
 	// Yaml keys which values are stripped from flare
 	config.BindEnvAndSetDefault("flare_stripped_keys", []string{})
 	config.BindEnvAndSetDefault("scrubber.additional_keys", []string{})
+	config.BindEnvAndSetDefault("scrubber.additional_replacers", []map[string]string{}, "DD_SCRUBBER_ADDITIONAL_REPLACERS")
+	config.ParseEnvJSON("scrubber.additional_replacers", []map[string]string{})
 
 	// Duration during which the host tags will be submitted with metrics.
 	config.BindEnvAndSetDefault("expected_tags_duration", time.Duration(0))

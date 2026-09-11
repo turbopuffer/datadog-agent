@@ -23,6 +23,7 @@ import (
 	pkgconfigsetup "github.com/DataDog/datadog-agent/pkg/config/setup"
 	"github.com/DataDog/datadog-agent/pkg/config/utils"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
+	"github.com/DataDog/datadog-agent/pkg/util/scrubber"
 )
 
 const (
@@ -237,7 +238,7 @@ func (cs *Stats) Add(t time.Duration, err error, warnings []error, metricStats S
 		if cs.Telemetry {
 			tlmRuns.Inc(cs.CheckName, runCheckFailureTag)
 		}
-		cs.LastError = err.Error()
+		cs.LastError = scrubber.ScrubLine(err.Error())
 
 		// Report error to health platform
 		cs.reportToHealthPlatform(err)
@@ -258,7 +259,7 @@ func (cs *Stats) Add(t time.Duration, err error, warnings []error, metricStats S
 		}
 		for _, w := range warnings {
 			cs.TotalWarnings++
-			cs.LastWarnings = append(cs.LastWarnings, w.Error())
+			cs.LastWarnings = append(cs.LastWarnings, scrubber.ScrubLine(w.Error()))
 		}
 	}
 	cs.UpdateTimestamp = time.Now()
