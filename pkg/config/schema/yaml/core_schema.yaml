@@ -241,6 +241,63 @@ properties:
     tags:
     - template_section:Common
     - full-agent-only:true
+  host_tags_replace_rules:
+    node_type: setting
+    type: array
+    default: []
+    env_vars:
+    - DD_HOST_TAGS_REPLACE_RULES
+    env_parser: json
+    items:
+      additionalProperties:
+        type: string
+      type: object
+    visibility: public
+    description: |-
+      Rules that rewrite host tag values with a regular expression before the
+      tags leave the Agent. Rules apply to every host tag source: the config,
+      cloud providers and Kubernetes node labels. Each rule has:
+       * name - string - The tag key to rewrite, or "*" for every key.
+       * pattern - string - The regular expression to match in the tag value.
+       * repl - string - The text that replaces each match. A tag whose value becomes empty is dropped.
+
+      Same shape as apm_config.replace_tags.
+    example: |2-
+
+        - name: "<TAG_KEY>"
+          pattern: "<REGEX_PATTERN>"
+          repl: "<PATTERN_TO_INLINE>"
+    tags:
+    - template_section:Common
+    - full-agent-only:true
+  host_aliases_replace_rules:
+    node_type: setting
+    type: array
+    default: []
+    env_vars:
+    - DD_HOST_ALIASES_REPLACE_RULES
+    env_parser: json
+    items:
+      additionalProperties:
+        type: string
+      type: object
+    visibility: public
+    description: |-
+      Rules that rewrite host aliases with a regular expression before the host
+      metadata payload leaves the Agent. Each rule has:
+       * name - string - Must be "*".
+       * pattern - string - The regular expression to match in the alias.
+       * repl - string - The text that replaces each match. An alias that becomes empty or is not a valid hostname is dropped.
+
+      Same shape as apm_config.replace_tags.
+    example: |2-
+
+        - name: "*"
+          pattern: "<REGEX_PATTERN>"
+          repl: "<PATTERN_TO_INLINE>"
+    tags:
+    - template_section:Common
+    - full-agent-only:true
   tags:
     node_type: setting
     type: array

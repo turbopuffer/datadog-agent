@@ -672,6 +672,10 @@ func LoadDatadog(config pkgconfigmodel.Config, secretResolver secrets.Component,
 		scrubber.AddStrippedKeys(scrubberAdditionalKeys)
 	}
 
+	if err := validateHostReplaceRules(config); err != nil {
+		return err
+	}
+
 	return setupFipsEndpoints(config)
 }
 

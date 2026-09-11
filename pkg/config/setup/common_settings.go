@@ -49,6 +49,10 @@ func initCoreAgentFull(config pkgconfigmodel.Setup) {
 	config.BindEnvAndSetDefault("metric_lookback.egress.post_recovery_window", 30*time.Second)
 
 	config.BindEnvAndSetDefault("host_aliases", []string{})
+	config.BindEnvAndSetDefault("host_tags_replace_rules", []map[string]string{}, "DD_HOST_TAGS_REPLACE_RULES")
+	config.ParseEnvJSON("host_tags_replace_rules", []map[string]string{})
+	config.BindEnvAndSetDefault("host_aliases_replace_rules", []map[string]string{}, "DD_HOST_ALIASES_REPLACE_RULES")
+	config.ParseEnvJSON("host_aliases_replace_rules", []map[string]string{})
 	config.BindEnvAndSetDefault("collect_ccrid", true)
 
 	// overridden in IoT Agent main
