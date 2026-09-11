@@ -1,0 +1,36 @@
+tpuf/README.md
+  s_bebc2a5a113a9c::t_b5a323224d65db 42
+  s_bebc2a5a113a9c::t_955c89eb08c23a 22-24
+  s_bebc2a5a113a9c::t_dee3a343b0d7b2 1-21,25-41,43
+tpuf/cosign.pub
+  s_bebc2a5a113a9c::t_6385ffc19f60fb 1-4
+tpuf/tbot.yaml
+  s_bebc2a5a113a9c::t_1e00685a35077b 1-37
+tpuf/build.sh
+  s_bebc2a5a113a9c::t_aefc3a4e36fcc6 1-107
+tpuf/compile.sh
+  s_bebc2a5a113a9c::t_7aaaa48f34bc35 1-123
+tpuf/trivyignore
+  s_bebc2a5a113a9c::t_b63d06bcedda25 1-13
+.github/workflows/publish-telemetry-images.yml
+  s_bebc2a5a113a9c::t_b4e01842bbef1d 1-166
+tpuf/Dockerfile
+  s_bebc2a5a113a9c::t_dfed4d8df252a6 24,27-39
+  s_bebc2a5a113a9c::t_4349e5e97999b3 1-23,25-26,40-75
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "04a35f8bd8d8309f67c71f2334dbbe35ecf07b39",
+  "prompts": {},
+  "sessions": {
+    "s_bebc2a5a113a9c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ed432c95-8e63-483d-b86b-e77908f00e75",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "Conor Landry <conor@turbopuffer.com>"
+    }
+  }
+}
