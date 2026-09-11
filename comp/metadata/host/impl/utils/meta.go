@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/DataDog/datadog-agent/comp/core/hostname/hostnameinterface/def"
+	"github.com/DataDog/datadog-agent/comp/metadata/host/impl/hosttags"
 	"github.com/DataDog/datadog-agent/pkg/config/model"
 	"github.com/DataDog/datadog-agent/pkg/util/cache"
 	"github.com/DataDog/datadog-agent/pkg/util/cloudproviders"
@@ -68,6 +69,7 @@ func getMeta(ctx context.Context, conf model.Reader, hostnameComp hostnameinterf
 
 	ccrid := ""
 	hostAliases, cloudname := cloudproviders.GetHostAliases(ctx)
+	hostAliases = hosttags.ApplyHostAliasReplaceRules(conf, hostAliases)
 	if conf.GetBool("collect_ccrid") {
 		ccrid = cloudproviders.GetHostCCRID(ctx, cloudname)
 	}

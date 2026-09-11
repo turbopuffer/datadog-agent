@@ -26,6 +26,34 @@ func TestGetMeta(t *testing.T) {
 	assert.NotEmpty(t, meta.SocketFqdn)
 }
 
+func TestGetMetaWithHostAliasesReplaceRules(t *testing.T) {
+	ctx := context.Background()
+
+	cfg := config.NewMockWithOverrides(t, map[string]interface{}{
+		"host_aliases": []string{"ip-10-0-1-23.us-gov-west-1.compute.internal", "my-alias"},
+	})
+	meta := getMeta(ctx, cfg, hostnameimpl.NewHostnameService())
+	assert.Contains(t, meta.HostAliases, "ip-10-0-1-23.us-gov-west-1.compute.internal")
+	assert.Contains(t, meta.HostAliases, "my-alias")
+
+	cfg = config.NewMockWithOverrides(t, map[string]interface{}{
+		"host_aliases": []string{"ip-10-0-1-23.us-gov-west-1.compute.internal", "my-alias"},
+		"host_aliases_replace_rules": []map[string]string{
+			{"name": "*", "pattern": `^ip-\d+(-\d+){3}.*$`, "repl": ""},
+		},
+	})
+	meta = getMeta(ctx, cfg, hostnameimpl.NewHostnameService())
+	assert.NotContains(t, meta.HostAliases, "ip-10-0-1-23.us-gov-west-1.compute.internal")
+	assert.Contains(t, meta.HostAliases, "my-alias")
+
+	cfg = config.NewMockWithOverrides(t, map[string]interface{}{
+		"host_aliases":               []string{"ip-10-0-1-23.us-gov-west-1.compute.internal", "my-alias"},
+		"host_aliases_replace_rules": []map[string]string{{"name": "*", "pattern": "^.*$", "repl": ""}},
+	})
+	meta = getMeta(ctx, cfg, hostnameimpl.NewHostnameService())
+	assert.Empty(t, meta.HostAliases)
+}
+
 func TestGetMetaFromCache(t *testing.T) {
 	ctx := context.Background()
 	cfg := config.NewMock(t)
