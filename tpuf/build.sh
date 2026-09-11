@@ -47,7 +47,7 @@ cd "${repo}"
 if [ -z "${tag}" ]; then
   tag=$(git describe --tags --exact-match HEAD 2>/dev/null) || fail "HEAD carries no tag, pass --tag"
 fi
-[[ "${tag}" =~ ^7\.[0-9]+\.[0-9]+-tpuf\.[0-9]+$ ]] || fail "tag ${tag} does not match 7.X.Y-tpuf.N"
+[[ "${tag}" =~ ^[0-9]+\.[0-9]+\.[0-9]+-tpuf\.[0-9]+$ ]] || fail "tag ${tag} does not match X.Y.Z-tpuf.N"
 base_version=${tag%%-tpuf.*}
 
 tpuf_commit=$(git rev-parse HEAD)

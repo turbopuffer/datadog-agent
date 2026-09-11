@@ -1,4 +1,4 @@
-# Builds the turbopuffer agent overlay from a 7.X.Y-tpuf.N tag and publishes it
+# Builds the turbopuffer agent overlay from an X.Y.Z-tpuf.N tag and publishes it
 # to the telemetry/ prefix in ACR, ECR and GAR.
 #
 # Registry access is secretless: tbot joins tpuf.teleport.sh with this run's
@@ -15,7 +15,7 @@ name: publish-telemetry-images
 on:
   push:
     tags:
-      - "7.*-tpuf.*"
+      - "*.*-tpuf.*"
   workflow_dispatch:
 
 permissions:
@@ -45,7 +45,7 @@ jobs:
       - name: Check the tag
         run: |
           [ "${GITHUB_REF_TYPE}" = "tag" ] || { echo "run this workflow from a tag"; exit 1; }
-          [[ "${GITHUB_REF_NAME}" =~ ^7\.[0-9]+\.[0-9]+-tpuf\.[0-9]+$ ]] || { echo "tag must look like 7.82.2-tpuf.1"; exit 1; }
+          [[ "${GITHUB_REF_NAME}" =~ ^[0-9]+\.[0-9]+\.[0-9]+-tpuf\.[0-9]+$ ]] || { echo "tag must look like 7.82.2-tpuf.1, any major"; exit 1; }
           [ "$(git cat-file -t "refs/tags/${GITHUB_REF_NAME}")" = "tag" ] || { echo "tag must be annotated"; exit 1; }
           echo "TAG=${GITHUB_REF_NAME}" >> "$GITHUB_ENV"
 

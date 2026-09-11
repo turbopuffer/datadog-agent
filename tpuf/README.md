@@ -69,7 +69,7 @@ lists the new keys and that a malformed rule stops the agent.
 
 ## Publishing
 
-`.github/workflows/publish-telemetry-images.yml` runs on a `7.*-tpuf.*` tag
+`.github/workflows/publish-telemetry-images.yml` runs on an `*.*-tpuf.*` tag
 push behind the `telemetry-publish` environment. It joins Teleport with
 `tbot.yaml`, builds against the mirrored vendor image in ACR, pushes to
 `turbopuffer.azurecr.io/telemetry/datadog-agent-tpuf`, scans, copies by digest
