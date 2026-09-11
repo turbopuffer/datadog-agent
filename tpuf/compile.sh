@@ -40,16 +40,22 @@ payload_version() {
 }
 
 # Embeds the config schema the binary validates against, the steps
-# //pkg/config/schema:install_compressed runs under Bazel. The files are
-# gitignored and //go:embed picks them up from the tree at build time.
+# //pkg/config/schema:install_compressed runs under Bazel. The two scripts
+# run from a shim package, because importing tasks.schema loads the whole
+# invoke tooling and its dependencies. The files are gitignored and
+# //go:embed picks them up from the tree at build time.
 embed_schema() {
-  local src=$1 tmp
+  local src=$1 tmp shim
   tmp=$(mktemp -d)
+  shim="${tmp}/shim/tasks/schema"
+  mkdir -p "${shim}"
+  touch "${tmp}/shim/tasks/__init__.py" "${shim}/__init__.py"
+  cp "${src}/tasks/schema/merge_schema.py" "${src}/tasks/schema/produce_byproduct.py" "${shim}/"
   (
     cd "${src}"
-    python3 tasks/schema/merge_schema.py pkg/config/schema/yaml/core_schema.yaml "${tmp}/core_schema.merged.yaml"
-    PYTHONPATH="${src}" python3 tasks/schema/produce_byproduct.py embedded "${tmp}/core_schema.merged.yaml" "${tmp}/core_schema.embedded.yaml"
-    PYTHONPATH="${src}" python3 tasks/schema/produce_byproduct.py embedded pkg/config/schema/yaml/system-probe_schema.yaml "${tmp}/system-probe_schema.embedded.yaml"
+    PYTHONPATH="${tmp}/shim" python3 "${shim}/merge_schema.py" pkg/config/schema/yaml/core_schema.yaml "${tmp}/core_schema.merged.yaml"
+    PYTHONPATH="${tmp}/shim" python3 "${shim}/produce_byproduct.py" embedded "${tmp}/core_schema.merged.yaml" "${tmp}/core_schema.embedded.yaml"
+    PYTHONPATH="${tmp}/shim" python3 "${shim}/produce_byproduct.py" embedded pkg/config/schema/yaml/system-probe_schema.yaml "${tmp}/system-probe_schema.embedded.yaml"
     # --no-check -5 is ZSTD_ARGS in pkg/config/schema/BUILD.bazel.
     zstd --no-check -5 -q -f "${tmp}/core_schema.embedded.yaml" -o pkg/config/schema/compressed/core_schema.yaml.zstd
     zstd --no-check -5 -q -f "${tmp}/system-probe_schema.embedded.yaml" -o pkg/config/schema/compressed/system-probe_schema.yaml.zstd
