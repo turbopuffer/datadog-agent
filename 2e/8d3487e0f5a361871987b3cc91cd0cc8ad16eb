@@ -1,0 +1,32 @@
+comp/metadata/host/impl/hosttags/tags.go
+  s_bebc2a5a113a9c::t_f8033483560065 203-211
+comp/metadata/host/impl/utils/meta_test.go
+  s_bebc2a5a113a9c::t_5a3467a6af4151 29-56
+comp/metadata/host/impl/hosttags/BUILD.bazel
+  s_bebc2a5a113a9c::t_3f5cd16efe2254 29
+  s_bebc2a5a113a9c::t_5a7c4cfb1a6b5e 8,17
+  s_bebc2a5a113a9c::t_24b17f1c379a2a 41-44
+comp/metadata/host/impl/hosttags/replace_rules.go
+  s_bebc2a5a113a9c::t_7e016b8a254acb 1-133
+comp/metadata/host/impl/hosttags/replace_rules_test.go
+  s_bebc2a5a113a9c::t_46211bf210f776 1-189
+comp/metadata/host/impl/utils/meta.go
+  s_bebc2a5a113a9c::t_3b7de6caa2f488 72
+  s_bebc2a5a113a9c::t_0818042afbbccd 14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "2e8d3487e0f5a361871987b3cc91cd0cc8ad16eb",
+  "prompts": {},
+  "sessions": {
+    "s_bebc2a5a113a9c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ed432c95-8e63-483d-b86b-e77908f00e75",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "Conor Landry <conor@turbopuffer.com>"
+    }
+  }
+}
