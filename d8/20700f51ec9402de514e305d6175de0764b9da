@@ -1,0 +1,46 @@
+pkg/config/setup/config.go
+  s_bebc2a5a113a9c::t_c363293af3fcfe 678-680
+pkg/collector/check/stats/stats_test.go
+  s_bebc2a5a113a9c::t_c4be739fe52796 9
+  s_bebc2a5a113a9c::t_d108a9b2969efd 146-164
+pkg/config/setup/common_settings.go
+  s_bebc2a5a113a9c::t_3841e624027684 1334-1335
+pkg/collector/check/stats/stats.go
+  s_bebc2a5a113a9c::t_906bd0acaef0ab 241
+  s_bebc2a5a113a9c::t_a348767dede850 26
+  s_bebc2a5a113a9c::t_33c8a1359d7037 262
+pkg/config/schema/yaml/core_schema.yaml
+  s_bebc2a5a113a9c::t_6ffbe479e97e8c 995-1019
+pkg/aggregator/BUILD.bazel
+  s_bebc2a5a113a9c::t_2951ca079e923a 83
+pkg/config/setup/scrubber_replacers.go
+  s_bebc2a5a113a9c::t_bb02991f5ba1ab 1-41
+pkg/config/setup/scrubber_replacers_test.go
+  s_bebc2a5a113a9c::t_e6bd92007183fd 1-59
+pkg/aggregator/sender_test.go
+  s_bebc2a5a113a9c::t_63ddbfda116728 287-298
+pkg/config/setup/BUILD.bazel
+  s_bebc2a5a113a9c::t_341a1c16b91516 76
+  s_bebc2a5a113a9c::t_af577569aa79d9 28
+pkg/collector/check/stats/BUILD.bazel
+  s_bebc2a5a113a9c::t_f6f5b898df3090 22
+pkg/aggregator/sender.go
+  s_bebc2a5a113a9c::t_6832da538b74e8 22
+  s_bebc2a5a113a9c::t_24ed5691a0997f 395
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "d820700f51ec9402de514e305d6175de0764b9da",
+  "prompts": {},
+  "sessions": {
+    "s_bebc2a5a113a9c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ed432c95-8e63-483d-b86b-e77908f00e75",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "Conor Landry <conor@turbopuffer.com>"
+    }
+  }
+}
