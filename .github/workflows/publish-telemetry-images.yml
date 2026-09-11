@@ -28,10 +28,10 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  BASE_IMAGE: turbopuffer.azurecr.io/mirror/datadoghq/agent
-  ACR_REPO: turbopuffer.azurecr.io/telemetry/datadog-agent
-  ECR_REPO: 961341552108.dkr.ecr.us-west-2.amazonaws.com/turbopuffer/telemetry/datadog-agent
-  GAR_REPO: us-central1-docker.pkg.dev/turbopuffer-onprem/telemetry/datadog-agent
+  VENDOR_IMAGE: turbopuffer.azurecr.io/mirror/datadoghq/agent
+  ACR_REPO: turbopuffer.azurecr.io/telemetry/datadog-agent-tpuf
+  ECR_REPO: 961341552108.dkr.ecr.us-west-2.amazonaws.com/turbopuffer/telemetry/datadog-agent-tpuf
+  GAR_REPO: us-central1-docker.pkg.dev/turbopuffer-onprem/telemetry/datadog-agent-tpuf
 
 jobs:
   publish:
@@ -146,7 +146,7 @@ jobs:
 
       - name: Provenance
         run: |
-          base_digest=$(sed -n 's/^ARG BASE_DIGEST=//p' tpuf/Dockerfile | head -1)
+          vendor_digest=$(sed -n 's/^ARG VENDOR_DIGEST=//p' tpuf/Dockerfile | head -1)
           cat > provenance.json <<EOF
           {
             "image": "${ACR_REPO}@${{ steps.build.outputs.digest }}",
@@ -154,7 +154,7 @@ jobs:
             "tag": "${TAG}",
             "source": "https://github.com/turbopuffer/datadog-agent",
             "commit": "${GITHUB_SHA}",
-            "base": "${BASE_IMAGE}@${base_digest}",
+            "base": "${VENDOR_IMAGE}@${vendor_digest}",
             "workflow_run": "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
           }
           EOF

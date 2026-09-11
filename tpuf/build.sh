@@ -9,11 +9,11 @@
 # reachable as tag <base>, or the script fetches it from upstream.
 #
 # Environment:
-#   BASE_IMAGE   vendor image repository. Default gcr.io/datadoghq/agent.
+#   VENDOR_IMAGE   vendor image repository. Default gcr.io/datadoghq/agent.
 #                Set to turbopuffer.azurecr.io/mirror/datadoghq/agent in CI.
-#   BASE_DIGEST  vendor image index digest for <base>. Default pinned below.
-#   COSIGN_PUB   public key that signed BASE_IMAGE. Verification runs only when
-#                BASE_IMAGE is a turbopuffer registry.
+#   VENDOR_DIGEST  vendor image index digest for <base>. Default pinned below.
+#   COSIGN_PUB   public key that signed VENDOR_IMAGE. Verification runs only when
+#                VENDOR_IMAGE is a turbopuffer registry.
 #   PLATFORM     default linux/amd64.
 set -euo pipefail
 
@@ -21,13 +21,13 @@ here=$(cd "$(dirname "$0")" && pwd)
 repo=$(cd "${here}/.." && pwd)
 
 UPSTREAM_URL=https://github.com/DataDog/datadog-agent.git
-BASE_IMAGE=${BASE_IMAGE:-gcr.io/datadoghq/agent}
-BASE_DIGEST=${BASE_DIGEST:-sha256:2104f06e8a2865a7f558a8a6c887c4c0cb84bb587730fd744b62a92099dbdf91}
+VENDOR_IMAGE=${VENDOR_IMAGE:-gcr.io/datadoghq/agent}
+VENDOR_DIGEST=${VENDOR_DIGEST:-sha256:2104f06e8a2865a7f558a8a6c887c4c0cb84bb587730fd744b62a92099dbdf91}
 COSIGN_PUB=${COSIGN_PUB:-${here}/cosign.pub}
 PLATFORM=${PLATFORM:-linux/amd64}
 
 push=0
-image=${IMAGE:-turbopuffer/datadog-agent}
+image=${IMAGE:-turbopuffer/datadog-agent-tpuf}
 tag=""
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -58,13 +58,13 @@ if ! base_commit=$(git rev-parse --verify --quiet "refs/tags/${base_version}^{co
 fi
 log "tag ${tag} at ${tpuf_commit}, base ${base_version} at ${base_commit}"
 
-case "${BASE_IMAGE}" in
+case "${VENDOR_IMAGE}" in
   *.azurecr.io/*|*.dkr.ecr.*.amazonaws.com/*|*-docker.pkg.dev/*)
-    log "verifying ${BASE_IMAGE}@${BASE_DIGEST} against ${COSIGN_PUB}"
-    cosign verify --key "${COSIGN_PUB}" --insecure-ignore-tlog=true "${BASE_IMAGE}@${BASE_DIGEST}" > /dev/null
+    log "verifying ${VENDOR_IMAGE}@${VENDOR_DIGEST} against ${COSIGN_PUB}"
+    cosign verify --key "${COSIGN_PUB}" --insecure-ignore-tlog=true "${VENDOR_IMAGE}@${VENDOR_DIGEST}" > /dev/null
     ;;
   *)
-    log "base ${BASE_IMAGE} is not a turbopuffer registry, skipping signature verification"
+    log "base ${VENDOR_IMAGE} is not a turbopuffer registry, skipping signature verification"
     ;;
 esac
 
@@ -81,8 +81,8 @@ build_args=(
   --provenance=false
   --sbom=false
   -f "${here}/Dockerfile"
-  --build-arg "BASE_IMAGE=${BASE_IMAGE}"
-  --build-arg "BASE_DIGEST=${BASE_DIGEST}"
+  --build-arg "VENDOR_IMAGE=${VENDOR_IMAGE}"
+  --build-arg "VENDOR_DIGEST=${VENDOR_DIGEST}"
   --build-arg "TPUF_VERSION=${tag}"
   --build-arg "TPUF_COMMIT=${tpuf_commit}"
   --build-arg "BASE_VERSION=${base_version}"

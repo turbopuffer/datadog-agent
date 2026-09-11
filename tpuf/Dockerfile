@@ -14,10 +14,10 @@
 # Build with tpuf/build.sh. It exports the two source trees with git archive
 # into the build context as ./patched and ./base.
 
-ARG BASE_IMAGE=gcr.io/datadoghq/agent
-ARG BASE_DIGEST=sha256:2104f06e8a2865a7f558a8a6c887c4c0cb84bb587730fd744b62a92099dbdf91
+ARG VENDOR_IMAGE=gcr.io/datadoghq/agent
+ARG VENDOR_DIGEST=sha256:2104f06e8a2865a7f558a8a6c887c4c0cb84bb587730fd744b62a92099dbdf91
 
-FROM ${BASE_IMAGE}@${BASE_DIGEST} AS build
+FROM ${VENDOR_IMAGE}@${VENDOR_DIGEST} AS build
 
 ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \
@@ -59,9 +59,9 @@ RUN --mount=type=cache,id=tpuf-gomod,target=/root/go/pkg/mod \
     BASE_VERSION="${BASE_VERSION}" BASE_COMMIT="${BASE_COMMIT}" \
     /src/patched/tpuf/compile.sh
 
-FROM ${BASE_IMAGE}@${BASE_DIGEST}
+FROM ${VENDOR_IMAGE}@${VENDOR_DIGEST}
 
-ARG BASE_DIGEST
+ARG VENDOR_DIGEST
 ARG TPUF_VERSION
 ARG TPUF_COMMIT
 
@@ -69,7 +69,7 @@ LABEL org.opencontainers.image.source="https://github.com/turbopuffer/datadog-ag
       org.opencontainers.image.version="${TPUF_VERSION}" \
       org.opencontainers.image.revision="${TPUF_COMMIT}" \
       org.opencontainers.image.base.name="gcr.io/datadoghq/agent" \
-      org.opencontainers.image.base.digest="${BASE_DIGEST}"
+      org.opencontainers.image.base.digest="${VENDOR_DIGEST}"
 
 # One layer: the patched agent binary and the modification notice.
 COPY --from=build --chown=0:0 /out/rootfs/ /
