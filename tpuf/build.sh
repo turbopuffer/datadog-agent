@@ -61,7 +61,10 @@ log "tag ${tag} at ${tpuf_commit}, base ${base_version} at ${base_commit}"
 case "${VENDOR_IMAGE}" in
   *.azurecr.io/*|*.dkr.ecr.*.amazonaws.com/*|*-docker.pkg.dev/*)
     log "verifying ${VENDOR_IMAGE}@${VENDOR_DIGEST} against ${COSIGN_PUB}"
-    cosign verify --key "${COSIGN_PUB}" --insecure-ignore-tlog=true "${VENDOR_IMAGE}@${VENDOR_DIGEST}" > /dev/null
+    # The mirror pipeline signs with cosign v2, a tag-stored legacy signature
+    # that cosign v3 finds only with this flag.
+    cosign verify --key "${COSIGN_PUB}" --insecure-ignore-tlog=true --new-bundle-format=false \
+      "${VENDOR_IMAGE}@${VENDOR_DIGEST}" > /dev/null
     ;;
   *)
     log "base ${VENDOR_IMAGE} is not a turbopuffer registry, skipping signature verification"

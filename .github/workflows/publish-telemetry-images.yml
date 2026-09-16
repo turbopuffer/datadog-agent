@@ -3,12 +3,13 @@
 #
 # Registry access is secretless: tbot joins tpuf.teleport.sh with this run's
 # GitHub OIDC token and each cloud federates the resulting SVID into the
-# telemetry-publish-ci principal. Those principals, the Teleport bot and the
-# registries are terraform in turbopuffer/turbopuffer.
+# telemetry-publish-ci principal. Those principals, the Teleport bot, the
+# registries and the signing key are terraform in turbopuffer/turbopuffer.
 #
-# The only secrets are the CI cosign key and its password, scoped to the
-# telemetry-publish environment, so the cosign.pub the BYOC kits ship verifies
-# the result. The environment's required reviewers gate every run.
+# The workflow holds no secrets. Images are signed with the derived-builds key
+# in Cloud KMS through the same GCP identity, so the private key never leaves
+# KMS. tpuf/cosign-derived-builds.pub verifies the result. The environment's
+# required reviewers gate every run.
 
 name: publish-telemetry-images
 
@@ -32,6 +33,8 @@ env:
   ACR_REPO: turbopuffer.azurecr.io/telemetry/datadog-agent-tpuf
   ECR_REPO: 961341552108.dkr.ecr.us-west-2.amazonaws.com/turbopuffer/telemetry/datadog-agent-tpuf
   GAR_REPO: us-central1-docker.pkg.dev/turbopuffer-onprem/telemetry/datadog-agent-tpuf
+  SIGNING_KEY: gcpkms://projects/turbopuffer-security/locations/us-central1/keyRings/image-signing/cryptoKeys/derived-builds/cryptoKeyVersions/1
+  SIGNING_PUB: tpuf/cosign-derived-builds.pub
 
 jobs:
   publish:
@@ -55,8 +58,9 @@ jobs:
       - name: Install cosign
         uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
         with:
-          # v2 for --tlog-upload=false, same as the mirror and product image pipelines.
-          cosign-release: v2.6.5
+          # Exact pin. tpuf/sign.sh and the base verify in tpuf/build.sh carry
+          # v3 flags.
+          cosign-release: v3.1.3
 
       - name: Install trivy
         uses: aquasecurity/setup-trivy@81e514348e19b6112ce2a7e3ecbafe19c1e1f567 # v0.3.1
@@ -90,7 +94,9 @@ jobs:
             | crane auth login 961341552108.dkr.ecr.us-west-2.amazonaws.com \
                 --username AWS --password-stdin
 
-      - name: Log in to GAR
+      # The credential file also serves cosign, which reaches Cloud KMS through
+      # Application Default Credentials.
+      - name: Log in to GAR and Cloud KMS
         run: |
           gcloud iam workload-identity-pools create-cred-config \
             "projects/1074977057039/locations/global/workloadIdentityPools/teleport-workload/providers/teleport-oidc" \
@@ -101,6 +107,7 @@ jobs:
           gcloud auth print-access-token \
             | crane auth login us-central1-docker.pkg.dev \
                 --username oauth2accesstoken --password-stdin
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/gcp-cred-config.json" >> "$GITHUB_ENV"
 
       - name: Build and push to ACR
         id: build
@@ -124,17 +131,6 @@ jobs:
             printf '`%s@%s`\n' "${dst}" "${digest}" >> "$GITHUB_STEP_SUMMARY"
           done
 
-      - name: Sign and verify
-        env:
-          COSIGN_SECRET_KEY: ${{ secrets.COSIGN_SECRET_KEY }}
-          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
-        run: |
-          digest="${{ steps.build.outputs.digest }}"
-          for repo in "${ACR_REPO}" "${ECR_REPO}" "${GAR_REPO}"; do
-            cosign sign --yes --tlog-upload=false --key env://COSIGN_SECRET_KEY "${repo}@${digest}"
-            cosign verify --key tpuf/cosign.pub --insecure-ignore-tlog=true "${repo}@${digest}" > /dev/null
-          done
-
       - name: SBOM
         uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
         with:
@@ -147,18 +143,19 @@ jobs:
       - name: Provenance
         run: |
           vendor_digest=$(sed -n 's/^ARG VENDOR_DIGEST=//p' tpuf/Dockerfile | head -1)
-          cat > provenance.json <<EOF
-          {
-            "image": "${ACR_REPO}@${{ steps.build.outputs.digest }}",
-            "copies": ["${ECR_REPO}:${TAG}", "${GAR_REPO}:${TAG}"],
-            "tag": "${TAG}",
-            "source": "https://github.com/turbopuffer/datadog-agent",
-            "commit": "${GITHUB_SHA}",
-            "base": "${VENDOR_IMAGE}@${vendor_digest}",
-            "workflow_run": "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
-          }
-          EOF
+          tpuf/provenance.sh --tag "${TAG}" --commit "${GITHUB_SHA}" \
+            --base "${VENDOR_IMAGE}@${vendor_digest}" \
+            --run-url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+            > provenance.json
           cat provenance.json
+
+      - name: Sign, attest and verify
+        run: |
+          digest="${{ steps.build.outputs.digest }}"
+          for repo in "${ACR_REPO}" "${ECR_REPO}" "${GAR_REPO}"; do
+            tpuf/sign.sh --key "${SIGNING_KEY}" --pub "${SIGNING_PUB}" \
+              --sbom sbom.spdx.json --provenance provenance.json "${repo}@${digest}"
+          done
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:

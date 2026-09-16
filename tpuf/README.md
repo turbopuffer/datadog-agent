@@ -9,7 +9,11 @@ This directory holds everything the fork adds outside the Go patch.
 | `build.sh` | Host entry point. Exports the two source trees with `git archive`, builds, optionally pushes and prints the digest. |
 | `tbot.yaml` | Teleport Machine ID config for the publish workflow. |
 | `trivyignore` | CVE waivers, copied from the mirror pipeline. |
-| `cosign.pub` | CI signing public key, copied from turbopuffer/turbopuffer. |
+| `sign.sh` | Signs one image by digest, attaches the SBOM and provenance attestations, verifies all three. Used by the publish workflow and by CI. |
+| `provenance.sh` | Prints the SLSA v1 provenance predicate for one build. |
+| `cosign-signing-config.json`, `cosign-trusted-root.json` | Cosign v3 inputs naming no transparency log, timestamp authority or certificate authority, so signing contacts nothing but the registry and Cloud KMS. |
+| `cosign.pub` | The turbopuffer CI signing public key, copied from turbopuffer/turbopuffer. Verifies the vendor base image the mirror pipeline signed. |
+| `cosign-derived-builds.pub` | Public key of the `derived-builds` Cloud KMS key. Verifies the images this fork publishes. |
 
 ## Why the vendor image is the base
 
@@ -63,9 +67,12 @@ Datadog, so the fork branches carry none of them. Two upstream
 from the PR base branch regardless and are disabled at the repository level.
 `.github/workflows/tpuf-ci.yml` runs on `tpuf-*` branches and their pull
 requests: `go vet` and `go test -tags test` on the edited packages,
-shellcheck on the build scripts, and the overlay build with its gate on amd64
-against the public vendor image, followed by a check that the embedded schema
-lists the new keys and that a malformed rule stops the agent.
+shellcheck on the scripts, the overlay build with its gate on amd64 against
+the public vendor image, followed by a check that the embedded schema lists
+the new keys and that a malformed rule stops the agent, and `sign.sh` against
+a scratch image in a job-local registry with a throwaway key while Sigstore's
+public hosts resolve to nothing. That last job proves the signing path has no
+dependency outside the registry and the key.
 
 ## Publishing
 
@@ -73,7 +80,34 @@ lists the new keys and that a malformed rule stops the agent.
 push behind the `telemetry-publish` environment. It joins Teleport with
 `tbot.yaml`, builds against the mirrored vendor image in ACR, pushes to
 `turbopuffer.azurecr.io/telemetry/datadog-agent-tpuf`, scans, copies by digest
-to ECR and GAR, and signs all three with the CI cosign key.
+to ECR and GAR, then signs and attests all three copies with `sign.sh`.
+
+The workflow holds no secrets. The signing key is `derived-builds` in Cloud
+KMS, project `turbopuffer-security`, and only the Teleport identity this
+workflow joins as may sign with it. It signs every image turbopuffer builds
+from a public fork and no product image, so a signature names its pipeline.
+Cosign is pinned to v3.1.3. v3 writes bundle signatures and, given no signing
+config, fetches one from Sigstore's public TUF server, so the two committed
+JSON files replace that fetch. The vendor base carries the mirror pipeline's
+cosign v2 signature, which v3 reads only with `--new-bundle-format=false`.
+
+## Verifying a published image
+
+Cosign v3 and the digest from the release note. Every copy in ACR, ECR and GAR
+carries the same digest, signature and attestations.
+
+```sh
+ref=us-central1-docker.pkg.dev/turbopuffer-onprem/telemetry/datadog-agent-tpuf@sha256:<digest>
+cosign verify --key cosign-derived-builds.pub --insecure-ignore-tlog=true "$ref"
+cosign verify-attestation --key cosign-derived-builds.pub --insecure-ignore-tlog=true --type slsaprovenance1 "$ref"
+cosign verify-attestation --key cosign-derived-builds.pub --insecure-ignore-tlog=true --type spdxjson "$ref"
+```
+
+The tlog flag is required because the signatures name no transparency log.
+The provenance names the fork commit, the tag and the vendor base digest. To
+confirm the image is one layer over Datadog's release, compare
+`crane manifest "$ref"` with `crane manifest gcr.io/datadoghq/agent@<vendor digest>`.
+Every layer but the last must match.
 
 ## Moving the base
 

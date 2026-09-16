@@ -2,7 +2,8 @@
 # and its GitHub workflows are PR bots, release automation and docs, so the
 # fork carries its own checks: unit tests for the edited packages, shellcheck
 # for the build scripts, and the overlay build with its differential gate on
-# amd64 against the public vendor image. Nothing here pushes or signs.
+# amd64 against the public vendor image. Nothing here pushes. The sign job
+# signs only a scratch image in a job-local registry with a throwaway key.
 
 name: tpuf-ci
 
@@ -55,7 +56,53 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - run: shellcheck -S warning tpuf/build.sh tpuf/compile.sh
+      - run: shellcheck -S warning tpuf/build.sh tpuf/compile.sh tpuf/sign.sh tpuf/provenance.sh
+
+  sign:
+    name: offline sign and attest
+    runs-on: ubuntu-latest
+    services:
+      registry:
+        image: registry:2@sha256:a3d8aaa63ed8681a604f1dea0aa03f100d5895b6a58ace528858a7b332415373
+        ports:
+          - 5000:5000
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: imjasonh/setup-crane@feee3b6bb0d4c68370f256a4502498c9227e5c6b # v0.7
+
+      - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+        with:
+          cosign-release: v3.1.3
+
+      # A real SPDX document for the attest step.
+      - uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
+        with:
+          path: tpuf
+          format: spdx-json
+          output-file: sbom.spdx.json
+          upload-artifact: false
+          upload-release-assets: false
+
+      # Sigstore's public services resolve to nothing from here on, so any
+      # dependency on them fails the job instead of hiding behind a warning.
+      - name: Sign, attest and verify with Sigstore unreachable
+        env:
+          COSIGN_PASSWORD: ""
+        run: |
+          cosign version 2>&1 | grep -q 'GitVersion: *v3\.' || { echo "cosign is not v3"; exit 1; }
+          echo "0.0.0.0 tuf-repo-cdn.sigstore.dev rekor.sigstore.dev fulcio.sigstore.dev timestamp.sigstore.dev" | sudo tee -a /etc/hosts
+          cosign generate-key-pair
+          echo scratch > scratch.txt && tar cf layer.tar scratch.txt
+          crane append --insecure -t localhost:5000/scratch:ci -f layer.tar
+          digest=$(crane digest --insecure localhost:5000/scratch:ci)
+          tpuf/provenance.sh --tag 0.0.0-tpuf.0 --commit "${GITHUB_SHA}" \
+            --base "gcr.io/datadoghq/agent@${digest}" \
+            --run-url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+            > provenance.json
+          tpuf/sign.sh --http --key cosign.key --pub cosign.pub \
+            --sbom sbom.spdx.json --provenance provenance.json "localhost:5000/scratch@${digest}"
+          crane ls --insecure localhost:5000/scratch
 
   overlay:
     name: overlay build and gate
