@@ -1,33 +1,33 @@
-# tbot config for publish-telemetry-images.yml. Joins the tpuf.teleport.sh
+# tbot config for publish-derived-images.yml. Joins the tpuf.teleport.sh
 # cluster via GitHub OIDC and writes one JWT SVID per cloud. Each cloud
-# federates the SVID into the telemetry-publish-ci principal defined in
+# federates the SVID into the derived-publish-ci principal defined in
 # turbopuffer/turbopuffer config/terraform/image-registries.
 version: v2
 proxy_server: tpuf.teleport.sh:443
 oneshot: true
 onboarding:
   join_method: github
-  token: telemetry-publish-github
+  token: derived-publish-github
 storage:
   type: memory
 services:
   - type: workload-identity-jwt
     selector:
-      name: telemetry-publish
+      name: derived-publish
     audiences: ["api://AzureADTokenExchange"]
     destination:
       type: directory
       path: ./tbot-out/azure
   - type: workload-identity-jwt
     selector:
-      name: telemetry-publish
+      name: derived-publish
     audiences: ["sts.amazonaws.com"]
     destination:
       type: directory
       path: ./tbot-out/aws
   - type: workload-identity-jwt
     selector:
-      name: telemetry-publish
+      name: derived-publish
     audiences:
       [
         "https://iam.googleapis.com/projects/1074977057039/locations/global/workloadIdentityPools/teleport-workload/providers/teleport-oidc",

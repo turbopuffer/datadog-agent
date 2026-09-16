@@ -76,11 +76,13 @@ dependency outside the registry and the key.
 
 ## Publishing
 
-`.github/workflows/publish-telemetry-images.yml` runs on an `*.*-tpuf.*` tag
-push behind the `telemetry-publish` environment. It joins Teleport with
+`.github/workflows/publish-derived-images.yml` runs on an `*.*-tpuf.*` tag
+push behind the `derived-publish` environment. It joins Teleport with
 `tbot.yaml`, builds against the mirrored vendor image in ACR, pushes to
-`turbopuffer.azurecr.io/telemetry/datadog-agent-tpuf`, scans, copies by digest
-to ECR and GAR, then signs and attests all three copies with `sign.sh`.
+`turbopuffer.azurecr.io/derived/datadog-agent-tpuf`, scans, copies by digest
+to ECR and GAR, then signs and attests all three copies with `sign.sh`. The
+`derived/` prefix holds third-party images turbopuffer rebuilds or patches,
+beside `mirror/` for unmodified copies.
 
 The workflow holds no secrets. The signing key is `derived-builds` in Cloud
 KMS, project `turbopuffer-security`, and only the Teleport identity this
@@ -97,7 +99,7 @@ Cosign v3 and the digest from the release note. Every copy in ACR, ECR and GAR
 carries the same digest, signature and attestations.
 
 ```sh
-ref=us-central1-docker.pkg.dev/turbopuffer-onprem/telemetry/datadog-agent-tpuf@sha256:<digest>
+ref=us-central1-docker.pkg.dev/turbopuffer-onprem/derived/datadog-agent-tpuf@sha256:<digest>
 cosign verify --key cosign-derived-builds.pub --insecure-ignore-tlog=true "$ref"
 cosign verify-attestation --key cosign-derived-builds.pub --insecure-ignore-tlog=true --type slsaprovenance1 "$ref"
 cosign verify-attestation --key cosign-derived-builds.pub --insecure-ignore-tlog=true --type spdxjson "$ref"

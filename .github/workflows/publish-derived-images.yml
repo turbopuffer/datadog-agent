@@ -1,9 +1,9 @@
 # Builds the turbopuffer agent overlay from an X.Y.Z-tpuf.N tag and publishes it
-# to the telemetry/ prefix in ACR, ECR and GAR.
+# to the derived/ prefix in ACR, ECR and GAR.
 #
 # Registry access is secretless: tbot joins tpuf.teleport.sh with this run's
 # GitHub OIDC token and each cloud federates the resulting SVID into the
-# telemetry-publish-ci principal. Those principals, the Teleport bot, the
+# derived-publish-ci principal. Those principals, the Teleport bot, the
 # registries and the signing key are terraform in turbopuffer/turbopuffer.
 #
 # The workflow holds no secrets. Images are signed with the derived-builds key
@@ -11,7 +11,7 @@
 # KMS. tpuf/cosign-derived-builds.pub verifies the result. The environment's
 # required reviewers gate every run.
 
-name: publish-telemetry-images
+name: publish-derived-images
 
 on:
   push:
@@ -25,21 +25,21 @@ permissions:
   id-token: write
 
 concurrency:
-  group: publish-telemetry-images-${{ github.ref_name }}
+  group: publish-derived-images-${{ github.ref_name }}
   cancel-in-progress: false
 
 env:
   VENDOR_IMAGE: turbopuffer.azurecr.io/mirror/datadoghq/agent
-  ACR_REPO: turbopuffer.azurecr.io/telemetry/datadog-agent-tpuf
-  ECR_REPO: 961341552108.dkr.ecr.us-west-2.amazonaws.com/turbopuffer/telemetry/datadog-agent-tpuf
-  GAR_REPO: us-central1-docker.pkg.dev/turbopuffer-onprem/telemetry/datadog-agent-tpuf
+  ACR_REPO: turbopuffer.azurecr.io/derived/datadog-agent-tpuf
+  ECR_REPO: 961341552108.dkr.ecr.us-west-2.amazonaws.com/turbopuffer/derived/datadog-agent-tpuf
+  GAR_REPO: us-central1-docker.pkg.dev/turbopuffer-onprem/derived/datadog-agent-tpuf
   SIGNING_KEY: gcpkms://projects/turbopuffer-security/locations/us-central1/keyRings/image-signing/cryptoKeys/derived-builds/cryptoKeyVersions/1
   SIGNING_PUB: tpuf/cosign-derived-builds.pub
 
 jobs:
   publish:
     runs-on: ubuntu-latest
-    environment: telemetry-publish
+    environment: derived-publish
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -78,7 +78,7 @@ jobs:
       - name: Log in to ACR
         run: |
           az login --service-principal \
-            --username "${{ vars.TELEMETRY_PUBLISH_AZURE_CLIENT_ID }}" \
+            --username "${{ vars.DERIVED_PUBLISH_AZURE_CLIENT_ID }}" \
             --tenant "398cc17e-41b3-44de-929a-dc4048da9592" \
             --federated-token "$(cat tbot-out/azure/jwt_svid)" \
             --allow-no-subscriptions
@@ -87,7 +87,7 @@ jobs:
       - name: Log in to ECR
         env:
           AWS_REGION: us-west-2
-          AWS_ROLE_ARN: arn:aws:iam::961341552108:role/telemetry-publish-ci
+          AWS_ROLE_ARN: arn:aws:iam::961341552108:role/derived-publish-ci
           AWS_WEB_IDENTITY_TOKEN_FILE: ${{ github.workspace }}/tbot-out/aws/jwt_svid
         run: |
           aws ecr get-login-password \
