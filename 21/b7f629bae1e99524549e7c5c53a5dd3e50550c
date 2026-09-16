@@ -1,0 +1,19 @@
+tpuf/cosign-derived-builds.pub
+  s_3c51f86eac6428::t_2ba4f8e8d070b3 1-4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "21b7f629bae1e99524549e7c5c53a5dd3e50550c",
+  "prompts": {},
+  "sessions": {
+    "s_3c51f86eac6428": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "aa3244a6-af39-4e06-926f-3cc56395df6e",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "Conor Landry <conor@turbopuffer.com>"
+    }
+  }
+}
