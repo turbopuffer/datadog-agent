@@ -1,0 +1,23 @@
+tpuf/README.md
+  s_7e86b09d4c1fb4::t_fc93e7315cd5d5 37-39,45,49
+tpuf/build.sh
+  s_7e86b09d4c1fb4::t_fc93e7315cd5d5 13
+.github/workflows/publish-derived-images.yml
+  s_7e86b09d4c1fb4::t_fc93e7315cd5d5 2,32,34-35,112,115,122,124,127-128,137,155
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "50890585cae89d28af823b5fd384b22a0e2c05ce",
+  "prompts": {},
+  "sessions": {
+    "s_7e86b09d4c1fb4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "67a8ce8e-b048-4db1-81bf-b0ba97c4f873",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "Conor Landry <conor@turbopuffer.com>"
+    }
+  }
+}
