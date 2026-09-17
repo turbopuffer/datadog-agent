@@ -1,0 +1,29 @@
+comp/metadata/host/impl/hosttags/replace_rules.go
+  s_7e86b09d4c1fb4::t_327aa76527f6c2 25,40,116
+pkg/config/schema/yaml/core_schema.yaml
+  s_7e86b09d4c1fb4::t_327aa76527f6c2 257-263,285-288,290-291,1007-1013
+pkg/config/setup/scrubber_replacers.go
+  s_7e86b09d4c1fb4::t_327aa76527f6c2 20
+pkg/config/setup/config.go
+  s_7e86b09d4c1fb4::t_327aa76527f6c2 631
+comp/metadata/host/impl/hosttags/tags.go
+  s_7e86b09d4c1fb4::t_327aa76527f6c2 204
+pkg/config/setup/host_replace_rules.go
+  s_7e86b09d4c1fb4::t_327aa76527f6c2 21,35
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "7373b3fe568b352e78f497c54c8f523997f6dc03",
+  "prompts": {},
+  "sessions": {
+    "s_7e86b09d4c1fb4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "67a8ce8e-b048-4db1-81bf-b0ba97c4f873",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "Conor Landry <conor@turbopuffer.com>"
+    }
+  }
+}
