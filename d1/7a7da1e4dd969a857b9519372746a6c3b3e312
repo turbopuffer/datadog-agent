@@ -1,0 +1,19 @@
+pkg/config/setup/config.go
+  s_7e86b09d4c1fb4::t_8deedf805468e0 630
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "d17a7da1e4dd969a857b9519372746a6c3b3e312",
+  "prompts": {},
+  "sessions": {
+    "s_7e86b09d4c1fb4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "67a8ce8e-b048-4db1-81bf-b0ba97c4f873",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "Conor Landry <conor@turbopuffer.com>"
+    }
+  }
+}
