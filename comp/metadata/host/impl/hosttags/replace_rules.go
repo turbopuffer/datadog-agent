@@ -22,9 +22,7 @@ const (
 	hostAliasesReplaceRulesKey = "host_aliases_replace_rules"
 )
 
-// ReplaceRule rewrites a host tag value or a host alias with a regular
-// expression. It has the shape of an apm_config.replace_tags rule.
-type ReplaceRule struct {
+type replaceRule struct {
 	Name    string `mapstructure:"name"`
 	Pattern string `mapstructure:"pattern"`
 	Repl    string `mapstructure:"repl"`
@@ -39,7 +37,7 @@ type compiledReplaceRule struct {
 var logLoadedRulesOnce sync.Map
 
 func loadReplaceRules(conf model.Reader, key string) ([]compiledReplaceRule, error) {
-	rules := []ReplaceRule{}
+	rules := []replaceRule{}
 	if err := structure.UnmarshalKey(conf, key, &rules, structure.EnableStringUnmarshal); err != nil {
 		return nil, fmt.Errorf("%s: %w", key, err)
 	}
@@ -60,9 +58,6 @@ func loadReplaceRules(conf model.Reader, key string) ([]compiledReplaceRule, err
 	return compiled, nil
 }
 
-// applyTagReplaceRules rewrites the value of each "key:value" tag that a rule
-// targets. A rule targets a tag when its name is "*" or equals the tag key.
-// A tag whose value becomes empty is dropped. Tags without a value are kept.
 func applyTagReplaceRules(tags []string, rules []compiledReplaceRule) []string {
 	if len(rules) == 0 {
 		return tags
@@ -94,8 +89,6 @@ func applyTagReplaceRules(tags []string, rules []compiledReplaceRule) []string {
 	return out
 }
 
-// applyAliasReplaceRules rewrites each alias with every rule. An alias that
-// becomes empty or is not a valid hostname is dropped.
 func applyAliasReplaceRules(aliases []string, rules []compiledReplaceRule) []string {
 	if len(rules) == 0 {
 		return aliases
@@ -120,9 +113,7 @@ func applyAliasReplaceRules(aliases []string, rules []compiledReplaceRule) []str
 	return out
 }
 
-// ApplyHostAliasReplaceRules applies host_aliases_replace_rules to the aliases
-// the host metadata payload reports. Config load already rejected malformed
-// rules, so a load error here keeps the aliases unchanged and is logged.
+// ApplyHostAliasReplaceRules applies host_aliases_replace_rules to the host aliases
 func ApplyHostAliasReplaceRules(conf model.Reader, aliases []string) []string {
 	rules, err := loadReplaceRules(conf, hostAliasesReplaceRulesKey)
 	if err != nil {

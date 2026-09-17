@@ -16,11 +16,8 @@ import (
 
 const scrubberAdditionalReplacersKey = "scrubber.additional_replacers"
 
-// addScrubberAdditionalReplacers registers scrubber.additional_replacers on the
-// default scrubber. A malformed rule is an error, so the Agent stops at config
-// load rather than run with a scrubber that is missing a rule.
 func addScrubberAdditionalReplacers(config pkgconfigmodel.Reader) error {
-	rules := []hostReplaceRule{}
+	rules := []replaceRule{}
 	if err := structure.UnmarshalKey(config, scrubberAdditionalReplacersKey, &rules, structure.EnableStringUnmarshal); err != nil {
 		return fmt.Errorf("%s: bad format, expected [{\"name\": \"<label>\", \"pattern\": \"<regexp>\", \"repl\": \"<text>\"}]: %w", scrubberAdditionalReplacersKey, err)
 	}

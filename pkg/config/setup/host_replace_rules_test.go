@@ -18,8 +18,6 @@ import (
 	pkgconfigmodel "github.com/DataDog/datadog-agent/pkg/config/model"
 )
 
-// Container deployments configure the Agent from the environment and carry no
-// config file. LoadDatadog must still reject a malformed rule on that path.
 func TestLoadDatadogValidatesHostReplaceRulesWithoutConfigFile(t *testing.T) {
 	missing := filepath.Join(t.TempDir(), "datadog.yaml")
 

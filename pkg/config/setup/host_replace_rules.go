@@ -18,15 +18,12 @@ const (
 	hostAliasesReplaceRulesKey = "host_aliases_replace_rules"
 )
 
-// hostReplaceRule has the shape of an apm_config.replace_tags rule.
-type hostReplaceRule struct {
+type replaceRule struct {
 	Name    string `mapstructure:"name"`
 	Pattern string `mapstructure:"pattern"`
 	Repl    string `mapstructure:"repl"`
 }
 
-// validateHostReplaceRules rejects a malformed rule at config load, so the
-// Agent stops before it sends its first host metadata payload.
 func validateHostReplaceRules(config pkgconfigmodel.Reader) error {
 	if err := validateHostReplaceRulesKey(config, hostTagsReplaceRulesKey, false); err != nil {
 		return err
@@ -35,7 +32,7 @@ func validateHostReplaceRules(config pkgconfigmodel.Reader) error {
 }
 
 func validateHostReplaceRulesKey(config pkgconfigmodel.Reader, key string, wildcardOnly bool) error {
-	rules := []hostReplaceRule{}
+	rules := []replaceRule{}
 	if err := structure.UnmarshalKey(config, key, &rules, structure.EnableStringUnmarshal); err != nil {
 		return fmt.Errorf("%s: bad format, expected [{\"name\": \"<tag>\", \"pattern\": \"<regexp>\", \"repl\": \"<text>\"}]: %w", key, err)
 	}
