@@ -42,11 +42,11 @@ references are in the job summary. Pin them in the chart.
 Some additional info:
 - The tag must be annotated. The workflow rejects lightweight tags.
 - Push the tag by name. `git push --tags` would also push the upstream release tags.
-- Tags in GAR and ECR are immutable, so a reused tag fails at the first push. To rebuild on the same release, bump `N`.
+- Tags in GAR and ECR are immutable, so a reused tag fails at the first push. To rebuild the same release, bump `N`.
 
 ## Verifying a published image
 
-Cosign v3 and the digest from the release note. Every copy in GAR, ECR and ACR
+Cosign v3 and the digest from the release note. Each image in GAR, ECR and ACR
 carries the same digest, signature and attestations.
 
 ```sh
@@ -56,15 +56,12 @@ cosign verify-attestation --key cosign-derived-builds.pub --insecure-ignore-tlog
 cosign verify-attestation --key cosign-derived-builds.pub --insecure-ignore-tlog=true --type spdxjson "$ref"
 ```
 
-The tlog flag is required because the signatures name no transparency log.
-The provenance names the fork commit, the tag and the vendor base digest. To
-confirm the image is one layer over Datadog's release, compare
-`crane manifest "$ref"` with `crane manifest gcr.io/datadoghq/agent@<vendor digest>`.
-Every layer but the last must match.
+- The tlog flag is required because the signatures name no transparency log.
+- The provenenace names the fork commit, the tag, and vendor base digest. To confirm the image's relation to the Datadog release, 
+compare `crane manifest "$ref"` with `crane manifest gcr.io/datadoghq/agent@<vendor digest>`.
 
 ## Moving the base
 
 1. Cut `tpuf-<version>` from the upstream tag and cherry-pick the fork commits.
 2. Update `VENDOR_DIGEST` in `Dockerfile` and `build.sh` from `crane digest gcr.io/datadoghq/agent:<version>`.
 3. Update the Go version and both tarball checksums in `Dockerfile` from the tag's `.go-version` and `https://go.dev/dl/?mode=json`.
-4. From 7.84.0 the settings Go code is generated from the schema YAML. Run `tasks/schema/codegen_settings_main.py` before `go build` in `compile.sh`, the way `dda inv schema.codegen` does.
