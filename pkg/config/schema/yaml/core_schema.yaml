@@ -241,6 +241,62 @@ properties:
     tags:
     - template_section:Common
     - full-agent-only:true
+  host_tags_replace_rules:
+    node_type: setting
+    type: array
+    default: []
+    env_vars:
+    - DD_HOST_TAGS_REPLACE_RULES
+    env_parser: json
+    items:
+      additionalProperties:
+        type: string
+      type: object
+    visibility: public
+    description: |-
+      Defines a set of rules to replace or remove host tags containing
+      potentially sensitive information. The rules apply to host tags from
+      every source: the configuration, cloud providers and Kubernetes node labels.
+      Each rule has to contain:
+       * name - string - The tag key to replace, or "*" to match every tag key.
+       * pattern - string - The pattern to match the desired content to replace
+       * repl - string - What to inline if the pattern is matched. A tag with an empty value after replacement is removed.
+    example: |2-
+
+        - name: "<TAG_KEY>"
+          pattern: "<REGEX_PATTERN>"
+          repl: "<PATTERN_TO_INLINE>"
+    tags:
+    - template_section:Common
+    - full-agent-only:true
+  host_aliases_replace_rules:
+    node_type: setting
+    type: array
+    default: []
+    env_vars:
+    - DD_HOST_ALIASES_REPLACE_RULES
+    env_parser: json
+    items:
+      additionalProperties:
+        type: string
+      type: object
+    visibility: public
+    description: |-
+      Defines a set of rules to replace or remove host aliases containing
+      potentially sensitive information. The rules apply to `host_aliases` and to
+      the aliases collected automatically from cloud providers.
+      Each rule has to contain:
+       * name - string - Must be "*".
+       * pattern - string - The pattern to match the desired content to replace
+       * repl - string - What to inline if the pattern is matched. An alias that is empty or not a valid hostname after replacement is removed.
+    example: |2-
+
+        - name: "*"
+          pattern: "<REGEX_PATTERN>"
+          repl: "<PATTERN_TO_INLINE>"
+    tags:
+    - template_section:Common
+    - full-agent-only:true
   tags:
     node_type: setting
     type: array
@@ -935,6 +991,31 @@ properties:
 
             - "sensitive_key_1"
             - "sensitive_key_2"
+      additional_replacers:
+        node_type: setting
+        type: array
+        default: []
+        env_vars:
+        - DD_SCRUBBER_ADDITIONAL_REPLACERS
+        env_parser: json
+        items:
+          additionalProperties:
+            type: string
+          type: object
+        visibility: public
+        description: |-
+          By default, the Agent scrubs known sensitive patterns such as API keys and passwords from
+          flares, status output, check errors and warnings, and service check messages.
+          Use this parameter to define additional patterns that the Agent should scrub.
+          Each rule has to contain:
+           * name - string - The name of the rule.
+           * pattern - string - The pattern to match the desired content to replace
+           * repl - string - What to inline if the pattern is matched
+        example: |2-
+
+            - name: "internal_ip"
+              pattern: '\b10\.\d{1,3}\.\d{1,3}\.\d{1,3}\b'
+              repl: "[IP]"
   no_proxy_nonexact_match:
     node_type: setting
     type: boolean

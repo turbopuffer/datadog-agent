@@ -49,6 +49,10 @@ func initCoreAgentFull(config pkgconfigmodel.Setup) {
 	config.BindEnvAndSetDefault("metric_lookback.egress.post_recovery_window", 30*time.Second)
 
 	config.BindEnvAndSetDefault("host_aliases", []string{})
+	config.BindEnvAndSetDefault("host_tags_replace_rules", []map[string]string{}, "DD_HOST_TAGS_REPLACE_RULES")
+	config.ParseEnvJSON("host_tags_replace_rules", []map[string]string{})
+	config.BindEnvAndSetDefault("host_aliases_replace_rules", []map[string]string{}, "DD_HOST_ALIASES_REPLACE_RULES")
+	config.ParseEnvJSON("host_aliases_replace_rules", []map[string]string{})
 	config.BindEnvAndSetDefault("collect_ccrid", true)
 
 	// overridden in IoT Agent main
@@ -1327,6 +1331,8 @@ func agent(config pkgconfigmodel.Setup) {
 	// Yaml keys which values are stripped from flare
 	config.BindEnvAndSetDefault("flare_stripped_keys", []string{})
 	config.BindEnvAndSetDefault("scrubber.additional_keys", []string{})
+	config.BindEnvAndSetDefault("scrubber.additional_replacers", []map[string]string{}, "DD_SCRUBBER_ADDITIONAL_REPLACERS")
+	config.ParseEnvJSON("scrubber.additional_replacers", []map[string]string{})
 
 	// Duration during which the host tags will be submitted with metrics.
 	config.BindEnvAndSetDefault("expected_tags_duration", time.Duration(0))

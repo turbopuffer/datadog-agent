@@ -200,6 +200,13 @@ func Get(ctx context.Context, cached bool, conf model.Reader) *Tags {
 		time.Sleep(retrySleepTime)
 	}
 
+	if rules, err := loadReplaceRules(conf, hostTagsReplaceRulesKey); err != nil {
+		log.Errorf("Ignoring %s: %v", hostTagsReplaceRulesKey, err)
+	} else if len(rules) > 0 {
+		hostTags = applyTagReplaceRules(hostTags, rules)
+		gceTags = applyTagReplaceRules(gceTags, rules)
+	}
+
 	t := &Tags{
 		System:              sort.UniqInPlace(hostTags),
 		GoogleCloudPlatform: gceTags,

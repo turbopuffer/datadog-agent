@@ -19,6 +19,7 @@ go_library(
         "//pkg/config/setup",
         "//pkg/config/utils",
         "//pkg/util/log",
+        "//pkg/util/scrubber",
         "@com_github_datadog_agent_payload_v5//healthplatform",
         "@com_github_go_viper_mapstructure_v2//:mapstructure",
     ],

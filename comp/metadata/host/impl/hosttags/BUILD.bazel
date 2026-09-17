@@ -5,6 +5,7 @@ go_library(
     name = "hosttags",
     srcs = [
         "eudm.go",
+        "replace_rules.go",
         "tags.go",
     ],
     importpath = "github.com/DataDog/datadog-agent/comp/metadata/host/impl/hosttags",
@@ -13,6 +14,7 @@ go_library(
         "//comp/core/tagger/tags",
         "//pkg/config/env",
         "//pkg/config/model",
+        "//pkg/config/structure",
         "//pkg/config/utils",
         "//pkg/gohai/cpu",
         "//pkg/gohai/memory",
@@ -24,6 +26,7 @@ go_library(
         "//pkg/util/docker",
         "//pkg/util/ec2/tags",
         "//pkg/util/hostname",
+        "//pkg/util/hostname/validate",
         "//pkg/util/kubernetes/cloudprovider",
         "//pkg/util/kubernetes/clusterinfo",
         "//pkg/util/kubernetes/clustername",
@@ -35,7 +38,10 @@ go_library(
 
 dd_agent_go_test(
     name = "hosttags_test",
-    srcs = ["tags_test.go"],
+    srcs = [
+        "replace_rules_test.go",
+        "tags_test.go",
+    ],
     embed = [":hosttags"],
     deps = [
         "//pkg/config/mock",

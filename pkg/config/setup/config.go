@@ -627,6 +627,15 @@ func LoadDatadog(config pkgconfigmodel.Config, secretResolver secrets.Component,
 		if errors.Is(err, os.ErrPermission) {
 			return log.Warnf("Error loading config: %v (check config file permissions for dd-agent user)", err)
 		}
+		// Container deployments configure the Agent from the env and don't have a config file
+		if errors.Is(err, pkgconfigmodel.ErrConfigFileNotFound) {
+			if verr := validateHostReplaceRules(config); verr != nil {
+				return verr
+			}
+			if verr := addScrubberAdditionalReplacers(config); verr != nil {
+				return verr
+			}
+		}
 		return err
 	}
 
@@ -670,6 +679,13 @@ func LoadDatadog(config pkgconfigmodel.Config, secretResolver secrets.Component,
 	scrubberAdditionalKeys := config.GetStringSlice("scrubber.additional_keys")
 	if len(scrubberAdditionalKeys) > 0 {
 		scrubber.AddStrippedKeys(scrubberAdditionalKeys)
+	}
+
+	if err := validateHostReplaceRules(config); err != nil {
+		return err
+	}
+	if err := addScrubberAdditionalReplacers(config); err != nil {
+		return err
 	}
 
 	return setupFipsEndpoints(config)

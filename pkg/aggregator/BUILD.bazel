@@ -80,6 +80,7 @@ go_library(
         "//pkg/util/hostname",
         "//pkg/util/infratags",
         "//pkg/util/log",
+        "//pkg/util/scrubber",
         "//pkg/util/option",
         "//pkg/util/quantile",
         "//pkg/util/size",

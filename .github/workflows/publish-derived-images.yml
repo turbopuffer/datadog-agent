@@ -1,0 +1,163 @@
+# Builds the turbopuffer agent overlay from an X.Y.Z-tpuf.N tag and publishes it
+# to the derived/ prefix in GAR, ECR and ACR.
+#
+# Registry access is secretless: tbot joins tpuf.teleport.sh with this run's
+# GitHub OIDC token and each cloud federates the resulting SVID into the
+# derived-publish-ci principal. Those principals, the Teleport bot, the
+# registries and the signing key are terraform in turbopuffer/turbopuffer.
+#
+# The workflow holds no secrets. Images are signed with the derived-builds key
+# in Cloud KMS through the same GCP identity, so the private key never leaves
+# KMS. tpuf/cosign-derived-builds.pub verifies the result. The environment's
+# required reviewers gate every run.
+
+name: publish-derived-images
+
+on:
+  push:
+    tags:
+      - "*.*-tpuf.*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  # Required for the Teleport github join method.
+  id-token: write
+
+concurrency:
+  group: publish-derived-images-${{ github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  VENDOR_IMAGE: us-central1-docker.pkg.dev/turbopuffer-onprem/mirror/datadoghq/agent
+  GAR_REPO: us-central1-docker.pkg.dev/turbopuffer-onprem/derived/datadog-agent-tpuf
+  ECR_REPO: 961341552108.dkr.ecr.us-west-2.amazonaws.com/turbopuffer/derived/datadog-agent-tpuf
+  ACR_REPO: turbopuffer.azurecr.io/derived/datadog-agent-tpuf
+  SIGNING_KEY: gcpkms://projects/turbopuffer-security/locations/us-central1/keyRings/image-signing/cryptoKeys/derived-builds/cryptoKeyVersions/1
+  SIGNING_PUB: tpuf/cosign-derived-builds.pub
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: derived-publish
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Check the tag
+        run: |
+          [ "${GITHUB_REF_TYPE}" = "tag" ] || { echo "run this workflow from a tag"; exit 1; }
+          [[ "${GITHUB_REF_NAME}" =~ ^[0-9]+\.[0-9]+\.[0-9]+-tpuf\.[0-9]+$ ]] || { echo "tag must look like 7.82.2-tpuf.1, any major"; exit 1; }
+          [ "$(git cat-file -t "refs/tags/${GITHUB_REF_NAME}")" = "tag" ] || { echo "tag must be annotated"; exit 1; }
+          echo "TAG=${GITHUB_REF_NAME}" >> "$GITHUB_ENV"
+
+      - name: Install crane
+        uses: imjasonh/setup-crane@feee3b6bb0d4c68370f256a4502498c9227e5c6b # v0.7
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+        with:
+          # Exact pin. tpuf/sign.sh and the base verify in tpuf/build.sh carry
+          # v3 flags.
+          cosign-release: v3.1.3
+
+      - name: Install trivy
+        uses: aquasecurity/setup-trivy@81e514348e19b6112ce2a7e3ecbafe19c1e1f567 # v0.3.1
+        with:
+          version: v0.74.0
+
+      - name: Install tbot
+        uses: teleport-actions/setup@b638ff596557cc3959eb6b5287d5e58e0c8ac6a6 # v1.1.1
+        with:
+          version: 18.11.0
+
+      - name: Issue federated tokens via Teleport
+        run: tbot start -c tpuf/tbot.yaml
+
+      - name: Log in to ACR
+        run: |
+          az login --service-principal \
+            --username "${{ vars.DERIVED_PUBLISH_AZURE_CLIENT_ID }}" \
+            --tenant "398cc17e-41b3-44de-929a-dc4048da9592" \
+            --federated-token "$(cat tbot-out/azure/jwt_svid)" \
+            --allow-no-subscriptions
+          az acr login --name turbopuffer
+
+      - name: Log in to ECR
+        env:
+          AWS_REGION: us-west-2
+          AWS_ROLE_ARN: arn:aws:iam::961341552108:role/derived-publish-ci
+          AWS_WEB_IDENTITY_TOKEN_FILE: ${{ github.workspace }}/tbot-out/aws/jwt_svid
+        run: |
+          aws ecr get-login-password \
+            | crane auth login 961341552108.dkr.ecr.us-west-2.amazonaws.com \
+                --username AWS --password-stdin
+
+      # The credential file also serves cosign, which reaches Cloud KMS through
+      # Application Default Credentials.
+      - name: Log in to GAR and Cloud KMS
+        run: |
+          gcloud iam workload-identity-pools create-cred-config \
+            "projects/1074977057039/locations/global/workloadIdentityPools/teleport-workload/providers/teleport-oidc" \
+            --credential-source-file="$GITHUB_WORKSPACE/tbot-out/gcp/jwt_svid" \
+            --credential-source-type=text \
+            --output-file="$RUNNER_TEMP/gcp-cred-config.json"
+          gcloud auth login --quiet --cred-file="$RUNNER_TEMP/gcp-cred-config.json"
+          gcloud auth print-access-token \
+            | crane auth login us-central1-docker.pkg.dev \
+                --username oauth2accesstoken --password-stdin
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/gcp-cred-config.json" >> "$GITHUB_ENV"
+
+      - name: Build and push to GAR
+        id: build
+        env:
+          IMAGE: ${{ env.GAR_REPO }}
+        run: tpuf/build.sh --push --tag "${TAG}"
+
+      - name: Scan
+        run: |
+          trivy image --severity CRITICAL --exit-code 1 \
+            --ignorefile tpuf/trivyignore \
+            "${GAR_REPO}@${{ steps.build.outputs.digest }}"
+
+      - name: Copy to ECR and ACR by digest
+        run: |
+          digest="${{ steps.build.outputs.digest }}"
+          for dst in "${ECR_REPO}" "${ACR_REPO}"; do
+            crane copy "${GAR_REPO}@${digest}" "${dst}:${TAG}"
+            got=$(crane digest "${dst}:${TAG}")
+            [ "${got}" = "${digest}" ] || { echo "${dst}:${TAG} resolved to ${got}, expected ${digest}"; exit 1; }
+            printf '`%s@%s`\n' "${dst}" "${digest}" >> "$GITHUB_STEP_SUMMARY"
+          done
+
+      - name: SBOM
+        uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
+        with:
+          image: ${{ env.GAR_REPO }}@${{ steps.build.outputs.digest }}
+          format: spdx-json
+          output-file: sbom.spdx.json
+          artifact-name: sbom-${{ env.TAG }}.spdx.json
+          upload-release-assets: false
+
+      - name: Provenance
+        run: |
+          vendor_digest=$(sed -n 's/^ARG VENDOR_DIGEST=//p' tpuf/Dockerfile | head -1)
+          tpuf/provenance.sh --tag "${TAG}" --commit "${GITHUB_SHA}" \
+            --base "${VENDOR_IMAGE}@${vendor_digest}" \
+            --run-url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+            > provenance.json
+          cat provenance.json
+
+      - name: Sign, attest and verify
+        run: |
+          digest="${{ steps.build.outputs.digest }}"
+          for repo in "${GAR_REPO}" "${ECR_REPO}" "${ACR_REPO}"; do
+            tpuf/sign.sh --key "${SIGNING_KEY}" --pub "${SIGNING_PUB}" \
+              --sbom sbom.spdx.json --provenance provenance.json "${repo}@${digest}"
+          done
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: provenance-${{ env.TAG }}
+          path: provenance.json

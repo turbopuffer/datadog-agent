@@ -19,6 +19,7 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/serializer/types"
 	"github.com/DataDog/datadog-agent/pkg/util/infratags"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
+	"github.com/DataDog/datadog-agent/pkg/util/scrubber"
 )
 
 // RawSender interface to submit samples to aggregator directly
@@ -391,7 +392,7 @@ func (s *checkSender) ServiceCheck(checkName string, status servicecheck.Service
 		Host:      hostname,
 		Ts:        time.Now().Unix(),
 		Tags:      append(tags, s.checkTags...),
-		Message:   message,
+		Message:   scrubber.ScrubLine(message),
 	}
 
 	if hostname == "" && !s.defaultHostnameDisabled {

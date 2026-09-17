@@ -6,6 +6,7 @@
 package stats
 
 import (
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -140,6 +141,25 @@ func TestFirstExecutionTimeMetric(t *testing.T) {
 	assert.Contains(t, tlmData,
 		`checks__first_execution_time{check_loader="mockLoader",check_name="checkString"} 100`,
 	)
+}
+
+func TestAddScrubsLastErrorAndWarnings(t *testing.T) {
+	stats := NewStats(newMockCheck(), healthplatformmock.Mock(t))
+	haagent := haagentmock.NewMockHaAgent()
+
+	stats.Add(
+		10*time.Millisecond,
+		errors.New("request failed: api_key=abcdef1234567890abcdef1234567890"),
+		[]error{errors.New("retrying with api_key=abcdef1234567890abcdef1234567890")},
+		SenderStats{},
+		haagent,
+	)
+
+	assert.NotContains(t, stats.LastError, "abcdef1234567890abcdef1234567890")
+	assert.Contains(t, stats.LastError, "request failed: api_key=")
+	require.Len(t, stats.LastWarnings, 1)
+	assert.NotContains(t, stats.LastWarnings[0], "abcdef1234567890abcdef1234567890")
+	assert.Contains(t, stats.LastWarnings[0], "retrying with api_key=")
 }
 
 func TestTranslateEventPlatformEventTypes(t *testing.T) {
