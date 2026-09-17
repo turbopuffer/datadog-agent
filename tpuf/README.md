@@ -93,6 +93,39 @@ config, fetches one from Sigstore's public TUF server, so the two committed
 JSON files replace that fetch. The vendor base carries the mirror pipeline's
 cosign v2 signature, which v3 reads only with `--new-bundle-format=false`.
 
+## Publishing a new image
+
+Merging a pull request publishes nothing. An annotated tag `X.Y.Z-tpuf.N`
+pushed to this repository does, where `X.Y.Z` is the vendor release the
+branch is cut from and `N` counts builds on that release. After the change is
+merged into `tpuf-<version>-base`:
+
+```sh
+git fetch origin
+git log --oneline -1 origin/tpuf-7.82.2-base
+git tag -a 7.82.2-tpuf.2 -m 7.82.2-tpuf.2 origin/tpuf-7.82.2-base
+git push origin 7.82.2-tpuf.2
+```
+
+Tag the head of the base branch, not a local branch, so the tag lands on the
+commit the merge produced. The tag must be annotated. The workflow rejects a
+lightweight tag. Push the one tag by name, because `git push --tags` would
+also push the upstream release tags a worktree carries.
+
+The push starts `publish-derived-images`, which waits at the `derived-publish`
+environment until a reviewer approves it from the run page under Actions.
+Before approving, confirm the tag is new and points at the base branch head.
+Tags in ECR and GAR are immutable. A run that reuses a tag pushes to ACR, then
+fails at the copy to ECR, and the registries disagree on that tag. A new build
+on the same release takes the next `N`.
+
+```sh
+gh run list --repo turbopuffer/datadog-agent --workflow publish-derived-images
+```
+
+The job summary prints the digest and the three registry references. The
+chart in turbopuffer/turbopuffer pins `derived/datadog-agent-tpuf:<tag>@sha256:<digest>`.
+
 ## Verifying a published image
 
 Cosign v3 and the digest from the release note. Every copy in ACR, ECR and GAR
