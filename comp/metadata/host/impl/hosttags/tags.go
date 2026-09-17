@@ -200,8 +200,6 @@ func Get(ctx context.Context, cached bool, conf model.Reader) *Tags {
 		time.Sleep(retrySleepTime)
 	}
 
-	// Config load already rejected malformed rules, so a load error here keeps
-	// the tags unchanged.
 	if rules, err := loadReplaceRules(conf, hostTagsReplaceRulesKey); err != nil {
 		log.Errorf("Ignoring %s: %v", hostTagsReplaceRulesKey, err)
 	} else if len(rules) > 0 {

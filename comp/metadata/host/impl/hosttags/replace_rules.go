@@ -113,7 +113,6 @@ func applyAliasReplaceRules(aliases []string, rules []compiledReplaceRule) []str
 	return out
 }
 
-// ApplyHostAliasReplaceRules applies host_aliases_replace_rules to the host aliases
 func ApplyHostAliasReplaceRules(conf model.Reader, aliases []string) []string {
 	rules, err := loadReplaceRules(conf, hostAliasesReplaceRulesKey)
 	if err != nil {

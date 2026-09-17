@@ -627,8 +627,7 @@ func LoadDatadog(config pkgconfigmodel.Config, secretResolver secrets.Component,
 		if errors.Is(err, os.ErrPermission) {
 			return log.Warnf("Error loading config: %v (check config file permissions for dd-agent user)", err)
 		}
-		// Container deployments configure the Agent from the environment and
-		// carry no config file.
+		// Container deployments configure the Agent from the env and don't have a config file
 		if errors.Is(err, pkgconfigmodel.ErrConfigFileNotFound) {
 			if verr := validateHostReplaceRules(config); verr != nil {
 				return verr
