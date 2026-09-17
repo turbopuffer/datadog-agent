@@ -34,19 +34,19 @@ git push origin 7.82.2-tpuf.2
 ```
 
 Then approve the `publish-derived-images` run under Actions. It builds against
-the mirrored vendor image in ACR, pushes to
-`turbopuffer.azurecr.io/derived/datadog-agent-tpuf`, scans, copies to ECR and
-GAR, then signs and attests all three. The digest and the three image
+the mirrored vendor image in GAR, pushes to
+`us-central1-docker.pkg.dev/turbopuffer-onprem/derived/datadog-agent-tpuf`,
+scans, copies to ECR and ACR, then signs and attests all three. The digest and the three image
 references are in the job summary. Pin them in the chart.
 
 Some additional info:
 - The tag must be annotated. The workflow rejects lightweight tags.
 - Push the tag by name. `git push --tags` would also push the upstream release tags.
-- Tags in ECR and GAR are immutable. To rebuild on the same release, bump `N`.
+- Tags in GAR and ECR are immutable, so a reused tag fails at the first push. To rebuild on the same release, bump `N`.
 
 ## Verifying a published image
 
-Cosign v3 and the digest from the release note. Every copy in ACR, ECR and GAR
+Cosign v3 and the digest from the release note. Every copy in GAR, ECR and ACR
 carries the same digest, signature and attestations.
 
 ```sh

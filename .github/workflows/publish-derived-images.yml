@@ -1,5 +1,5 @@
 # Builds the turbopuffer agent overlay from an X.Y.Z-tpuf.N tag and publishes it
-# to the derived/ prefix in ACR, ECR and GAR.
+# to the derived/ prefix in GAR, ECR and ACR.
 #
 # Registry access is secretless: tbot joins tpuf.teleport.sh with this run's
 # GitHub OIDC token and each cloud federates the resulting SVID into the
@@ -29,10 +29,10 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  VENDOR_IMAGE: turbopuffer.azurecr.io/mirror/datadoghq/agent
-  ACR_REPO: turbopuffer.azurecr.io/derived/datadog-agent-tpuf
-  ECR_REPO: 961341552108.dkr.ecr.us-west-2.amazonaws.com/turbopuffer/derived/datadog-agent-tpuf
+  VENDOR_IMAGE: us-central1-docker.pkg.dev/turbopuffer-onprem/mirror/datadoghq/agent
   GAR_REPO: us-central1-docker.pkg.dev/turbopuffer-onprem/derived/datadog-agent-tpuf
+  ECR_REPO: 961341552108.dkr.ecr.us-west-2.amazonaws.com/turbopuffer/derived/datadog-agent-tpuf
+  ACR_REPO: turbopuffer.azurecr.io/derived/datadog-agent-tpuf
   SIGNING_KEY: gcpkms://projects/turbopuffer-security/locations/us-central1/keyRings/image-signing/cryptoKeys/derived-builds/cryptoKeyVersions/1
   SIGNING_PUB: tpuf/cosign-derived-builds.pub
 
@@ -109,23 +109,23 @@ jobs:
                 --username oauth2accesstoken --password-stdin
           echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/gcp-cred-config.json" >> "$GITHUB_ENV"
 
-      - name: Build and push to ACR
+      - name: Build and push to GAR
         id: build
         env:
-          IMAGE: ${{ env.ACR_REPO }}
+          IMAGE: ${{ env.GAR_REPO }}
         run: tpuf/build.sh --push --tag "${TAG}"
 
       - name: Scan
         run: |
           trivy image --severity CRITICAL --exit-code 1 \
             --ignorefile tpuf/trivyignore \
-            "${ACR_REPO}@${{ steps.build.outputs.digest }}"
+            "${GAR_REPO}@${{ steps.build.outputs.digest }}"
 
-      - name: Copy to ECR and GAR by digest
+      - name: Copy to ECR and ACR by digest
         run: |
           digest="${{ steps.build.outputs.digest }}"
-          for dst in "${ECR_REPO}" "${GAR_REPO}"; do
-            crane copy "${ACR_REPO}@${digest}" "${dst}:${TAG}"
+          for dst in "${ECR_REPO}" "${ACR_REPO}"; do
+            crane copy "${GAR_REPO}@${digest}" "${dst}:${TAG}"
             got=$(crane digest "${dst}:${TAG}")
             [ "${got}" = "${digest}" ] || { echo "${dst}:${TAG} resolved to ${got}, expected ${digest}"; exit 1; }
             printf '`%s@%s`\n' "${dst}" "${digest}" >> "$GITHUB_STEP_SUMMARY"
@@ -134,7 +134,7 @@ jobs:
       - name: SBOM
         uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
         with:
-          image: ${{ env.ACR_REPO }}@${{ steps.build.outputs.digest }}
+          image: ${{ env.GAR_REPO }}@${{ steps.build.outputs.digest }}
           format: spdx-json
           output-file: sbom.spdx.json
           artifact-name: sbom-${{ env.TAG }}.spdx.json
@@ -152,7 +152,7 @@ jobs:
       - name: Sign, attest and verify
         run: |
           digest="${{ steps.build.outputs.digest }}"
-          for repo in "${ACR_REPO}" "${ECR_REPO}" "${GAR_REPO}"; do
+          for repo in "${GAR_REPO}" "${ECR_REPO}" "${ACR_REPO}"; do
             tpuf/sign.sh --key "${SIGNING_KEY}" --pub "${SIGNING_PUB}" \
               --sbom sbom.spdx.json --provenance provenance.json "${repo}@${digest}"
           done

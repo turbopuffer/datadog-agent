@@ -10,7 +10,7 @@
 #
 # Environment:
 #   VENDOR_IMAGE   vendor image repository. Default gcr.io/datadoghq/agent.
-#                Set to turbopuffer.azurecr.io/mirror/datadoghq/agent in CI.
+#                Set to us-central1-docker.pkg.dev/turbopuffer-onprem/mirror/datadoghq/agent in CI.
 #   VENDOR_DIGEST  vendor image index digest for <base>. Default pinned below.
 #   COSIGN_PUB   public key that signed VENDOR_IMAGE. Verification runs only when
 #                VENDOR_IMAGE is a turbopuffer registry.
