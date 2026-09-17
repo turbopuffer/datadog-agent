@@ -1,46 +1,6 @@
 # turbopuffer overlay build
 
-This directory holds everything the fork adds outside the Go patch.
-
-| File | Purpose |
-|---|---|
-| `Dockerfile` | Two-stage build. Compiles the agent inside the vendor image at the release tag, then lays one layer over the vendor image by digest. |
-| `compile.sh` | Runs in the build stage. Embeds the config schema, builds base and patched binaries, runs the differential gate, strips the result. |
-| `build.sh` | Host entry point. Exports the two source trees with `git archive`, builds, optionally pushes and prints the digest. |
-| `tbot.yaml` | Teleport Machine ID config for the publish workflow. |
-| `trivyignore` | CVE waivers, copied from the mirror pipeline. |
-| `sign.sh` | Signs one image by digest, attaches the SBOM and provenance attestations, verifies all three. Used by the publish workflow and by CI. |
-| `provenance.sh` | Prints the SLSA v1 provenance predicate for one build. |
-| `cosign-signing-config.json`, `cosign-trusted-root.json` | Cosign v3 inputs naming no transparency log, timestamp authority or certificate authority, so signing contacts nothing but the registry and Cloud KMS. |
-| `cosign.pub` | The turbopuffer CI signing public key, copied from turbopuffer/turbopuffer. Verifies the vendor base image the mirror pipeline signed. |
-| `cosign-derived-builds.pub` | Public key of the `derived-builds` Cloud KMS key. Verifies the images this fork publishes. |
-
-## Why the vendor image is the base
-
-The fork changes one binary, `/opt/datadog-agent/bin/agent/agent`. Everything
-else the container runs is Datadog's release image `datadoghq/agent` at the
-same tag: the embedded Python and rtloader libraries the agent links against,
-the s6 init scripts, the integrations under `conf.d`, the CA bundle, and the
-trace, process, security and system-probe binaries, which stay stock.
-
-`VENDOR_IMAGE` and `VENDOR_DIGEST` name that image. CI builds from the signed
-mirror copy in ACR, a local build from the public registry. Compiling inside
-that image, not in a generic Go image, makes the result link the runtime's own
-glibc and rtloader. Publishing it as one layer on top of that image, not a
-flattened copy, keeps every lower layer identical to Datadog's, which anyone
-can confirm with `crane manifest` without trusting turbopuffer.
-
-## Why not `dda inv agent.build`
-
-`compile.sh` runs the same `go build ./cmd/agent` that upstream's `dda inv
-agent.build` runs underneath, with the Go version, build tags and
-`CGO_ENABLED` read from the vendor binary's buildinfo and the link flags from
-`tasks/libs/common/utils.py`. The wrapper itself is not used because at this
-tag it needs Bazel, its `schema.compress` step is `bazel run
-//pkg/config/schema:install_compressed`, and its version helper recognises
-only `-rc.N` and `-devel` suffixes, so a `7.82.2-tpuf.N` tag would not stamp.
-The one Bazel product the binary needs, the compressed config schema, is
-produced by `compile.sh` with the same two Python scripts and `zstd` call.
+This directory holds additional tpuf specific files needed to build/publish the agent fork.
 
 ## Local build
 
@@ -50,81 +10,39 @@ tpuf/build.sh
 ```
 
 The default vendor image is the public `gcr.io/datadoghq/agent` at the pinned
-digest. The default platform is `linux/amd64`, what the fleet runs. On an Apple
-Silicon host set `PLATFORM=linux/arm64` to compile natively for a smoke test;
-the gate derives build tags from the vendor binary of the platform it builds.
-The build downloads Go and modules, so the first run takes a while. The gate
-fails the build if the patched binary differs from the vendor binary in module
-list or build tags, from the base build in dynamic section, or if symbols
-outside the edited packages differ from a no-op build of the base sources.
+digest. The default platform is `linux/amd64`, which is what we run. On an Apple
+Silicon host set `PLATFORM=linux/arm64` to compile natively.
 
-## CI
-
-Upstream runs the agent's test suite in GitLab CI. Its GitHub workflows are
-PR bots, release automation and docs, and none of them can run outside
-Datadog, so the fork branches carry none of them. Two upstream
-`pull_request_target` bots, the CLA assistant and the community labeler, run
-from the PR base branch regardless and are disabled at the repository level.
-`.github/workflows/tpuf-ci.yml` runs on `tpuf-*` branches and their pull
-requests: `go vet` and `go test -tags test` on the edited packages,
-shellcheck on the scripts, the overlay build with its gate on amd64 against
-the public vendor image, followed by a check that the embedded schema lists
-the new keys and that a malformed rule stops the agent, and `sign.sh` against
-a scratch image in a job-local registry with a throwaway key while Sigstore's
-public hosts resolve to nothing. That last job proves the signing path has no
-dependency outside the registry and the key.
+Some additional info:
+- Build will install Go and modules, so no need to have Go installed locally first
+- The Build will fail under the following gates:
+  - The patched binary must use the same Go modules and build tags as the Datadog binary
+  - The patched binary must link the same shared libs as the base build
+  - The only symbols that may differ between the base build and the patched build are in packages we edit
 
 ## Publishing
 
-`.github/workflows/publish-derived-images.yml` runs on an `*.*-tpuf.*` tag
-push behind the `derived-publish` environment. It joins Teleport with
-`tbot.yaml`, builds against the mirrored vendor image in ACR, pushes to
-`turbopuffer.azurecr.io/derived/datadog-agent-tpuf`, scans, copies by digest
-to ECR and GAR, then signs and attests all three copies with `sign.sh`. The
-`derived/` prefix holds third-party images turbopuffer rebuilds or patches,
-beside `mirror/` for unmodified copies.
+CI publishes an image when an annotated `X.Y.Z-tpuf.N` tag is pushed.
+Merging a PR does not publish anything.
 
-The workflow holds no secrets. The signing key is `derived-builds` in Cloud
-KMS, project `turbopuffer-security`, and only the Teleport identity this
-workflow joins as may sign with it. It signs every image turbopuffer builds
-from a public fork and no product image, so a signature names its pipeline.
-Cosign is pinned to v3.1.3. v3 writes bundle signatures and, given no signing
-config, fetches one from Sigstore's public TUF server, so the two committed
-JSON files replace that fetch. The vendor base carries the mirror pipeline's
-cosign v2 signature, which v3 reads only with `--new-bundle-format=false`.
-
-## Publishing a new image
-
-Merging a pull request publishes nothing. An annotated tag `X.Y.Z-tpuf.N`
-pushed to this repository does, where `X.Y.Z` is the vendor release the
-branch is cut from and `N` counts builds on that release. After the change is
-merged into `tpuf-<version>-base`:
+After the PR is merged into `tpuf-<version>-base`:
 
 ```sh
 git fetch origin
-git log --oneline -1 origin/tpuf-7.82.2-base
 git tag -a 7.82.2-tpuf.2 -m 7.82.2-tpuf.2 origin/tpuf-7.82.2-base
 git push origin 7.82.2-tpuf.2
 ```
 
-Tag the head of the base branch, not a local branch, so the tag lands on the
-commit the merge produced. The tag must be annotated. The workflow rejects a
-lightweight tag. Push the one tag by name, because `git push --tags` would
-also push the upstream release tags a worktree carries.
+Then approve the `publish-derived-images` run under Actions. It builds against
+the mirrored vendor image in ACR, pushes to
+`turbopuffer.azurecr.io/derived/datadog-agent-tpuf`, scans, copies to ECR and
+GAR, then signs and attests all three. The digest and the three image
+references are in the job summary. Pin them in the chart.
 
-The push starts `publish-derived-images`, which waits at the `derived-publish`
-environment until a reviewer approves it from the run page under Actions.
-Before approving, confirm the tag is new and points at the base branch head.
-Tags in ECR and GAR are immutable. A run that reuses a tag pushes to ACR, then
-fails at the copy to ECR, and the registries disagree on that tag. A new build
-on the same release takes the next `N`.
-
-```sh
-gh run list --repo turbopuffer/datadog-agent --workflow publish-derived-images
-```
-
-The job summary prints the digest and the three registry references. The
-chart in turbopuffer/turbopuffer pins `derived/datadog-agent-tpuf:<tag>@sha256:<digest>`.
+Some additional info:
+- The tag must be annotated. The workflow rejects lightweight tags.
+- Push the tag by name. `git push --tags` would also push the upstream release tags.
+- Tags in ECR and GAR are immutable. To rebuild on the same release, bump `N`.
 
 ## Verifying a published image
 
